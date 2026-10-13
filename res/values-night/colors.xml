@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Material 3 Colors -->
+    <color name="bg_screen">#111318</color>
+    <color name="bg_surface">#191C20</color>
+    <color name="bg_surface_variant">#22252A</color>
+    <color name="bg_surface_container">#1D2024</color>
+    <color name="bg_surface_container_high">#282A2F</color>
+
+    <color name="color_primary">#A8C7FA</color>
+    <color name="color_on_primary">#062E6F</color>
+    <color name="color_primary_container">#0842A0</color>
+    <color name="color_on_primary_container">#D3E3FD</color>
+
+    <color name="color_secondary">#7FCFFF</color>
+    <color name="color_secondary_container">#004B73</color>
+    <color name="color_on_secondary_container">#C2E7FF</color>
+
+    <color name="color_tertiary">#84D2E6</color>
+    <color name="color_tertiary_container">#004E5C</color>
+    <color name="color_on_tertiary_container">#ABEDFF</color>
+
+    <color name="text_primary">#E2E2E6</color>
+    <color name="text_secondary">#C4C7C5</color>
+    <color name="text_tertiary">#8E9192</color>
+
+    <color name="outline_border">#33373B</color>
+    <color name="outline_variant">#444746</color>
+
+    <color name="color_success">#6DD58C</color>
+    <color name="color_success_container">#0A5322</color>
+    <color name="color_error">#FFB4AB</color>
+    <color name="color_error_container">#3E181C</color>
+
+    <color name="chip_selected_bg">#0842A0</color>
+    <color name="chip_unselected_bg">#282A2F</color>
+</resources>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/card_interactive_bg"
+    android:descendantFocusability="blocksDescendants"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/itemHistoryDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="2026-10-13 14:30"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/color_primary" />
+
+        <ImageView
+            android:id="@+id/itemHistoryDelete"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_delete"
+            android:tint="@color/color_error"
+            android:padding="8dp"
+            android:background="@drawable/m3_btn_delete_circle"
+            android:contentDescription="@string/btn_clear" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/itemHistorySnippet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="بداية النص المفرغ هنا..."
+        android:textSize="14sp"
+        android:textColor="@color/text_primary"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:lineSpacingMultiplier="1.2"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/itemHistoryMatchBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="3 تطابق"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:textColor="@color/color_primary"
+        android:background="@drawable/chip_bg"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:layout_marginTop="2dp"
+        android:visibility="gone" />
+
+</LinearLayout>

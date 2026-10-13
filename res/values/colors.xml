@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light Material 3 Colors -->
+    <color name="bg_screen">#F8F9FD</color>
+    <color name="bg_surface">#FFFFFF</color>
+    <color name="bg_surface_variant">#F0F4F9</color>
+    <color name="bg_surface_container">#FFFFFF</color>
+    <color name="bg_surface_container_high">#E9EEF6</color>
+
+    <color name="color_primary">#0B57D0</color>
+    <color name="color_on_primary">#FFFFFF</color>
+    <color name="color_primary_container">#D3E3FD</color>
+    <color name="color_on_primary_container">#041E49</color>
+
+    <color name="color_secondary">#00639B</color>
+    <color name="color_secondary_container">#C2E7FF</color>
+    <color name="color_on_secondary_container">#001D35</color>
+
+    <color name="color_tertiary">#00687A</color>
+    <color name="color_tertiary_container">#ABEDFF</color>
+    <color name="color_on_tertiary_container">#001F26</color>
+
+    <color name="text_primary">#1F1F1F</color>
+    <color name="text_secondary">#444746</color>
+    <color name="text_tertiary">#72777A</color>
+
+    <color name="outline_border">#E0E2E0</color>
+    <color name="outline_variant">#C4C7C5</color>
+
+    <color name="color_success">#146C2E</color>
+    <color name="color_success_container">#C4EED0</color>
+    <color name="color_error">#BA1A1A</color>
+    <color name="color_error_container">#FFDAD6</color>
+
+    <color name="chip_selected_bg">#D3E3FD</color>
+    <color name="chip_unselected_bg">#F0F4F9</color>
+</resources>
