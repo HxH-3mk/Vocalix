@@ -1710,11 +1710,13 @@ public class MainActivity extends Activity {
             @Override
             public void onError(String error) {
                 NotificationHelper.dismissTranscribingNotification(MainActivity.this, false);
+                // Show a clear, actionable Arabic explanation instead of raw provider jargon.
+                final String friendly = VocalixAiClient.friendlyErrorFor(error);
                 runOnUiThreadSafe(() -> {
                     progressBar.setVisibility(View.GONE);
                     btnRetry.setVisibility(View.VISIBLE);
-                    tvStatus.setText(getString(R.string.status_error) + error);
-                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
+                    tvStatus.setText(getString(R.string.status_error) + friendly);
+                    Toast.makeText(MainActivity.this, friendly, Toast.LENGTH_LONG).show();
                 });
             }
         });

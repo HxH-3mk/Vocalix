@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -56,13 +57,26 @@ public class VocalixAiClient {
     // NOTE: entries whose daily free quota is already saturated (e.g. gemini-3.8-flash at 21/20 RPD)
     // were removed from the default priority queue; they remain available if explicitly chosen by
     // the user and will be auto-cooled-down via the smart cooldown engine when they return 429.
+    // Priority order tuned against the account's real free-tier limits (RPD/TPM):
+    // gemini-3.8-flash was REMOVED from the queue because its daily free quota is saturated
+    // (21/20 RPD) - trying it first only produced endless 429 waits on big uploads.
     public static final List<String> GEMINI_MODELS = Arrays.asList(
-            "gemini-3.5-flash-lite", // 500 RPD ultra-fast lightweight
-            "gemini-3.1-flash-lite", // 500 RPD ultra-fast lightweight
-            "gemini-2.5-flash-lite", // Next-gen lightweight multimodal, generous RPD
-            "gemini-2.5-flash",      // Next-gen ultra-fast multimodal
-            "gemini-1.5-flash"       // Highly reliable standard multimodal
+            "gemini-3.5-flash-lite", // 500 RPD / 250K TPM - fastest, biggest daily quota
+            "gemini-3.1-flash-lite", // 500 RPD backup lite tier
+            "gemini-2.5-flash-lite", // Older stable lite multimodal
+            "gemini-2.5-flash",      // Higher accuracy when quota allows
+            "gemini-1.5-flash"       // Legacy fallback
     );
+
+    /** Models whose free daily quota is known to be saturated for this account - never auto-tried. */
+    private static final java.util.Set<String> QUOTA_AWARE_SKIP =
+            Collections.synchronizedSet(new java.util.HashSet<String>(Arrays.asList("gemini-3.8-flash")));
+
+    /** True if a model id is audio-capable enough to waste an upload on (vision-only models return empty text). */
+    private static boolean isAudioCapableModel(String m) {
+        String s = m.toLowerCase(Locale.US);
+        return s.contains("flash") || s.contains("pro") || s.contains("audio") || s.contains("gemini");
+    }
 
     public static final List<String> OPENAI_MODELS = Arrays.asList(
             "whisper-1",
@@ -135,8 +149,31 @@ public class VocalixAiClient {
         }
         long ms;
         if (httpCode == 429) {
-            long hinted = parseRetryDelayMs(errBody);
-            ms = hinted > 0 ? hinted : 30_000L;
+            // Daily-quota exhaustion ("per day" / RPD) resets only at midnight Pacific - a 30s
+            // cooldown would just re-burn quota. Cool the model down until the next reset window.
+            boolean daily = errBody != null && (errBody.toLowerCase(Locale.US).contains("per day")
+                    || errBody.toLowerCase(Locale.US).contains("daily")
+                    || errBody.toLowerCase(Locale.US).contains("requests per day"));
+            if (daily) {
+                QUOTA_AWARE_SKIP.add(modelName); // never auto-try it again this session
+                long now = System.currentTimeMillis();
+                try {
+                    java.util.Calendar pacific = java.util.Calendar.getInstance(
+                            java.util.TimeZone.getTimeZone("America/Los_Angeles"));
+                    pacific.add(java.util.Calendar.DAY_OF_YEAR, 1);
+                    pacific.set(java.util.Calendar.HOUR_OF_DAY, 0);
+                    pacific.set(java.util.Calendar.MINUTE, 5);
+                    pacific.set(java.util.Calendar.SECOND, 0);
+                    ms = Math.max(pacific.getTimeInMillis() - now, 15 * 60_000L);
+                } catch (Exception e) {
+                    ms = 6 * 3600_000L;
+                }
+            } else {
+                long hinted = parseRetryDelayMs(errBody);
+                ms = hinted > 0 ? hinted : 30_000L;
+            }
+        } else if (httpCode == 200) { // empty-but-200 response: model can't really handle this audio
+            ms = 30 * 60_000L;
         } else { // 503 and other transient server states
             ms = 60_000L;
         }
@@ -148,6 +185,79 @@ public class VocalixAiClient {
         if (BLACKLISTED_MODELS.contains(modelName)) return false;
         Long until = MODEL_COOLDOWN_UNTIL.get(modelName);
         return until == null || until <= System.currentTimeMillis();
+    }
+
+    /**
+     * One cheap preflight request (tiny JSON body, no audio) to learn whether the model exists
+     * and accepts requests for this key BEFORE uploading tens of MB of base64 payload.
+     * Returns:
+     *   0  -> healthy, worth uploading audio
+     *   1  -> transiently unavailable (429/503/5xx): caller should skip without wasting bandwidth
+     *   2  -> permanently unavailable (404/not supported): blacklisted by the caller
+     *   3  -> fatal auth problem (bad key): abort everything
+     *   -1 -> inconclusive (network hiccup etc.): proceed with the real upload anyway
+     */
+    private static int geminiPreflight(String modelName, String apiKey) {
+        HttpURLConnection conn = null;
+        try {
+            JSONObject part = new JSONObject();
+            part.put("text", "Reply with the single word: OK");
+            JSONArray parts = new JSONArray();
+            parts.put(part);
+            JSONObject content = new JSONObject();
+            content.put("parts", parts);
+            JSONArray contents = new JSONArray();
+            contents.put(content);
+            JSONObject root = new JSONObject();
+            root.put("contents", contents);
+            JSONObject genConfig = new JSONObject();
+            genConfig.put("maxOutputTokens", 8);
+            JSONObject thinkingConfig = new JSONObject();
+            thinkingConfig.put("thinking_budget", 0);
+            genConfig.put("thinkingConfig", thinkingConfig);
+            root.put("generationConfig", genConfig);
+            byte[] body = root.toString().getBytes(UTF8);
+
+            URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("x-goog-api-key", apiKey);
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(15000);
+            conn.setFixedLengthStreamingMode(body.length);
+            conn.setDoOutput(true);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+                os.flush();
+            }
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) return 0;
+            String errBody = readStream(conn.getErrorStream());
+            String low = errBody.toLowerCase(Locale.US);
+            if (code == 401 || code == 403 || low.contains("api key") || low.contains("api_key_invalid")) {
+                LAST_GEMINI_ERROR = "مفتاح API غير صالح أو لا يملك صلاحية الطلب. يرجى التحقق من المفتاح في الإعدادات.";
+                return 3;
+            }
+            if (code == 404 || low.contains("not found") || low.contains("is not supported")) {
+                BLACKLISTED_MODELS.add(modelName);
+                return 2;
+            }
+            if (code == 429) {
+                markModelUnavailable(modelName, 429, errBody);
+                return 1;
+            }
+            if (code == 503 || code >= 500) {
+                markModelUnavailable(modelName, code, errBody);
+                return 1;
+            }
+            return -1; // e.g. 400 on the probe itself - don't block the real attempt
+        } catch (Exception e) {
+            Log.w(TAG, "Preflight inconclusive for " + modelName + ": " + e.getMessage());
+            return -1;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
     }
 
     /**
@@ -164,13 +274,20 @@ public class VocalixAiClient {
         if (extraKnown != null) {
             for (String m : extraKnown) {
                 String name = m.replace("models/", "");
+                // Only audio-capable multimodal models belong in a transcription queue:
+                // image-only / text-only entries produced empty 200 responses that looked like
+                // an endless "loading" spinner on big files.
+                if (!isAudioCapableModel(name)) continue;
                 if (!ordered.contains(name) && !rest.contains(name)) rest.add(name);
             }
         }
         // Move unhealthy models to the back instead of dropping them entirely:
         // if all preferred models fail we still give them one last chance.
+        // Quota-saturated models (RPD exhausted) are dropped outright - retrying them today
+        // is guaranteed to fail and only wastes upload bandwidth and time.
         List<String> degraded = new ArrayList<>();
         for (String m : rest) {
+            if (QUOTA_AWARE_SKIP.contains(m) || BLACKLISTED_MODELS.contains(m)) continue;
             if (isModelAvailable(m)) ordered.add(m); else degraded.add(m);
         }
         ordered.addAll(degraded);
@@ -201,6 +318,26 @@ public class VocalixAiClient {
     public static void resetModelHealth() {
         BLACKLISTED_MODELS.clear();
         MODEL_COOLDOWN_UNTIL.clear();
+        QUOTA_AWARE_SKIP.clear();
+        PREFLIGHT_OK.clear();
+    }
+
+    /** Public helper for the UI: maps any raw provider error to a clear Arabic message + practical advice. */
+    public static String friendlyErrorFor(String rawError) {
+        String s = rawError == null ? "" : rawError.toLowerCase(Locale.US);
+        if (s.contains("per day") || s.contains("rpd") || s.contains("daily")) {
+            return "الحصة اليومية للنموذج استُنزفت (حد الطلبات لكل يوم في الخطة المجانية). تُعاد بعد منتصف الليل بتوقيت المحيط الهادئ، أو جرّب Groq المجاني فوراً.";
+        }
+        if (s.contains("rate limit") || s.contains("429") || s.contains("exhausted")) {
+            return "ضغط على حد المعدل: انتظر دقيقة ثم أعد المحاولة، أو بدّل النموذج/المزود.";
+        }
+        if (s.contains("quota") || s.contains("billing")) {
+            return "رصيد الخطة المجانية غير كافٍ لهذا الطلب. فعّل الفوترة أو استخدم مزوداً آخر مثل Groq.";
+        }
+        if (s.contains("not found") || s.contains("unsupported") || s.contains("503")) {
+            return "النموذج الحالي غير متوفر مؤقتاً - الوضع الذكي سيجرب نموذجاً صحياً تلقائياً.";
+        }
+        return rawError;
     }
 
     /**
@@ -481,15 +618,32 @@ public class VocalixAiClient {
             long fileSize = audioFile.length();
             StringBuilder accumulated = new StringBuilder();
 
+            // ---- Fast-fail when every preferred model is known to be quota-exhausted ----
+            // Without this, big files used to "load forever": each doomed chunk re-uploaded MBs
+            // of base64 to models that were guaranteed to answer 429 until midnight.
+            boolean anyHealthy = false;
+            for (String m : modelQueue) {
+                if (!QUOTA_AWARE_SKIP.contains(m) && !BLACKLISTED_MODELS.contains(m) && isModelAvailable(m)) {
+                    anyHealthy = true;
+                    break;
+                }
+            }
+            if (!anyHealthy) {
+                callback.onError("رصيد جميع نماذج Gemini المستقرة لهذا المفتاح مستنفد اليوم (حد الطلبات اليومية). " +
+                        "سيُعاد التعيين تلقائياً بعد منتصف الليل بتوقيت المحيط الهادئ، أو جرّب مزود Groq المجاني الآن.");
+                return;
+            }
+
             // ---- Very large files: one real multipart upload through the official Files API ----
             if (fileSize > LARGE_FILE_FILES_API_BYTES &&
                     tryGeminiFileApiUpload(audioFile, effectiveMime, modelQueue, apiKey, splitSpeakers, accumulated, callback)) {
                 return; // success or terminal error already delivered
             }
 
-            if (fileSize <= MAX_INLINE_FILE_BYTES) {
+            if (fileSize <= 14L * 1024 * 1024) {
                 // Single-pass upload: base64 streams directly into the request body without
                 // ever materializing the whole encoded file in memory (OOM-safe).
+                // 14MB raw -> ~18.7MB after base64 inflation, safely under the 20MB request cap.
                 GeminiResult res = runGeminiAttempt(modelQueue, apiKey, audioFile, -1, -1, effectiveMime,
                         splitSpeakers, accumulated, callback);
                 if (res == GeminiResult.SUCCESS) {
@@ -503,6 +657,11 @@ public class VocalixAiClient {
             }
 
             // ---- Large file fallback: automatic sequential chunking ----
+            // Only chunk when the file can actually fit the Files API limit (~2GB / ~9.5h audio).
+            if (fileSize > 1024L * 1024 * 1024) {
+                callback.onError("الملف ضخم جداً (" + (fileSize / (1024 * 1024)) + " ميجابايت). الحد الأقصى للرفع التلقائي ~1 جيجابايت. قصّ الملف إلى أجزاء أقصر أولاً.");
+                return;
+            }
             long chunkCount = (fileSize + CHUNK_RAW_BYTES - 1) / CHUNK_RAW_BYTES;
             callback.onPartialChunk("ملف كبير: يتم التفريغ على " + chunkCount + " أجزاء متتالية...\n");
             long offset = 0;
@@ -513,7 +672,9 @@ public class VocalixAiClient {
                         splitSpeakers, accumulated, callback);
                 if (res == GeminiResult.FATAL) return;
                 if (res != GeminiResult.SUCCESS) {
-                    callback.onError("تعذر إكمال الجزء " + partNo + "/" + chunkCount + " من الملف. تأكد من توفر رصيد في أحد النماذج أو استخدم ملفاً أقصر.");
+                    String learned = LAST_GEMINI_ERROR != null ? LAST_GEMINI_ERROR : "";
+                    callback.onError("تعذر إكمال الجزء " + partNo + "/" + chunkCount + " من الملف. " + learned +
+                            " تأكد من توفر رصيد في أحد النماذج أو استخدم ملفاً أقصر.");
                     return;
                 }
                 offset += len;
@@ -531,6 +692,23 @@ public class VocalixAiClient {
 
     private static volatile String LAST_GEMINI_ERROR = null;
 
+    /** Models already preflighted successfully this session - no need to probe them again. */
+    private static final java.util.Set<String> PREFLIGHT_OK =
+            Collections.synchronizedSet(new java.util.HashSet<String>());
+
+    /**
+     * Preflights a model (cheap, no audio) unless already known healthy.
+     * Returns true when the model is worth attempting; false when it should be skipped.
+     * Sets fatalFlag[0]=true when the whole run must abort (bad API key).
+     */
+    private static boolean preflightGeminiModel(String modelName, String apiKey, boolean[] fatalFlag) {
+        if (PREFLIGHT_OK.contains(modelName)) return true;
+        int p = geminiPreflight(modelName, apiKey);
+        if (p == 3) { fatalFlag[0] = true; return false; }
+        if (p == 0) { PREFLIGHT_OK.add(modelName); return true; }
+        return p == -1; // inconclusive -> try the real upload anyway
+    }
+
     /**
      * Runs one transcription pass through the model queue. Streams base64 audio straight into
      * the HTTP body (fixed-size buffering, no giant allocations), parses SSE tokens, and records
@@ -540,6 +718,20 @@ public class VocalixAiClient {
                                                 long rangeStart, long rangeLen, String mime,
                                                 boolean splitSpeakers, StringBuilder accumulated,
                                                 TranscribeCallback callback) {
+        // ---- Early abort: never build/attempt a payload that exceeds the 20MB request cap.
+        // This was the main "infinite loading" trap: base64 inflates audio by ~33%, so files
+        // in the 15-20MB window produced payloads Google rejects mid-stream. ----
+        final long approxPayload;
+        if (rangeLen >= 0) {
+            approxPayload = ((rangeLen + 2) / 3) * 4 + 8192;
+        } else {
+            approxPayload = ((audioFile.length() + 2) / 3) * 4 + 8192;
+        }
+        if (approxPayload > MAX_INLINE_FILE_BYTES) {
+            LAST_GEMINI_ERROR = "حجم الطلب بعد الترميز (" + (approxPayload / (1024 * 1024)) +
+                    " ميجابايت) يتجاوز حد 20 ميجابايت لطلبات الرفع المباشر.";
+            return GeminiResult.RETRY_NEXT_MODEL; // caller should route via Files API / smaller chunks
+        }
         final int b64Len;
         if (rangeLen >= 0) {
             b64Len = (int) (((rangeLen + 2) / 3) * 4);
@@ -566,7 +758,25 @@ public class VocalixAiClient {
         final int totalLen = prefixLen + b64Len + suffixLen;
 
         String lastError = null;
+        int attempts = 0;
+        final int MAX_ATTEMPTS = 3; // never burn minutes re-uploading the same audio to doomed models
         for (String modelName : modelQueue) {
+            if (attempts >= MAX_ATTEMPTS) {
+                lastError = "تم إيقاف المحاولات بعد " + MAX_ATTEMPTS + " نماذج لتجنب الانتظار الطويل بلا جدوى.";
+                break;
+            }
+            // ---- Smart preflight: verify the model exists & has quota BEFORE streaming MBs of audio ----
+            boolean[] fatalFlag = new boolean[1];
+            if (!preflightGeminiModel(modelName, apiKey, fatalFlag)) {
+                if (fatalFlag[0]) {
+                    callback.onError(LAST_GEMINI_ERROR != null ? LAST_GEMINI_ERROR
+                            : "مفتاح API غير صالح أو لا يملك صلاحية الطلب. يرجى التحقق من المفتاح في الإعدادات.");
+                    return GeminiResult.FATAL;
+                }
+                lastError = "النموذج " + modelName + " غير متاح حالياً، تم تخطيه دون رفع الصوت...";
+                continue;
+            }
+            attempts++;
             HttpURLConnection conn = null;
             try {
                 URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse");
@@ -575,8 +785,8 @@ public class VocalixAiClient {
                 conn.setRequestProperty("x-goog-api-key", apiKey); // key in header: never leaks via URLs/logs
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 conn.setRequestProperty("Accept", "text/event-stream");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(60000);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(120000); // long uploads + big transcripts need generous read windows
                 conn.setFixedLengthStreamingMode(totalLen);
                 conn.setDoOutput(true);
 
@@ -591,6 +801,7 @@ public class VocalixAiClient {
                 if (code >= 200 && code < 300) {
                     StringBuilder errSink = new StringBuilder();
                     if (parseSseStream(conn, accumulated, callback, errSink)) return GeminiResult.SUCCESS;
+                    PREFLIGHT_OK.remove(modelName); // next attempt must re-probe this model
                     markModelUnavailable(modelName, code, errSink.toString());
                     lastError = "انقطع الرد من " + modelName + " دون نص مفيد.";
                     continue;
@@ -633,7 +844,13 @@ public class VocalixAiClient {
                 callback.onError("خطأ من Google (" + modelName + "): " + errMsg);
                 return GeminiResult.FATAL;
 
+            } catch (ProtocolException pe) {
+                // Fixed-length streaming violated => the body was NOT fully sent. Retrying other
+                // models re-uploads the same doomed payload; abort fast instead of hanging forever.
+                callback.onError("تعذر إرسال الطلب كاملاً: " + pe.getMessage());
+                return GeminiResult.FATAL;
             } catch (SocketTimeoutException ste) {
+                PREFLIGHT_OK.remove(modelName);
                 lastError = "انتهت مهلة الاستجابة (" + modelName + "). قد يكون المقطع طويلاً جداً لهذا النموذج.";
             } catch (UnknownHostException uhe) {
                 callback.onError("تعذر الوصول إلى خوادم Google. تحقق من اتصال الإنترنت.");
@@ -662,7 +879,21 @@ public class VocalixAiClient {
             if (fileUri == null) return false; // upload failed -> fallback to chunked inline mode
 
             String lastError = null;
+            int attempts = 0;
             for (String modelName : modelQueue) {
+                if (attempts >= 3) break;
+                // Preflight first: never spend a multi-MB JSON upload on a dead/cooling model.
+                boolean[] fatalFlag = new boolean[1];
+                if (!preflightGeminiModel(modelName, apiKey, fatalFlag)) {
+                    if (fatalFlag[0]) {
+                        callback.onError(LAST_GEMINI_ERROR != null ? LAST_GEMINI_ERROR
+                                : "مفتاح API غير صالح أو لا يملك صلاحية الطلب. يرجى التحقق من المفتاح في الإعدادات.");
+                        return true;
+                    }
+                    lastError = "النموذج " + modelName + " غير متاح حالياً، تم تخطيه دون رفع...";
+                    continue;
+                }
+                attempts++;
                 HttpURLConnection conn = null;
                 try {
                     JSONObject rootPayload = buildGeminiPayload(mime, splitSpeakers, false);
@@ -675,8 +906,8 @@ public class VocalixAiClient {
                     conn.setRequestProperty("x-goog-api-key", apiKey);
                     conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                     conn.setRequestProperty("Accept", "text/event-stream");
-                    conn.setConnectTimeout(10000);
-                    conn.setReadTimeout(120000);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(180000); // large files transcribe slowly server-side
                     conn.setDoOutput(true);
                     byte[] body = rootPayload.toString().getBytes(UTF8);
                     try (OutputStream os = conn.getOutputStream()) {
@@ -691,6 +922,7 @@ public class VocalixAiClient {
                             callback.onSuccess(accumulated.toString().trim());
                             return true;
                         }
+                        PREFLIGHT_OK.remove(modelName);
                         markModelUnavailable(modelName, code, errSink.toString());
                         lastError = "انقطع الرد من " + modelName + " دون نص مفيد.";
                         continue;
@@ -925,6 +1157,13 @@ public class VocalixAiClient {
                     JSONArray candidates = respJson.optJSONArray("candidates");
                     if (candidates != null && candidates.length() > 0) {
                         JSONObject candidate = candidates.getJSONObject(0);
+                        // Surface safety/other blocks instead of silently hanging with an empty UI.
+                        String blockReason = candidate.optString("finishReason", "");
+                        if ("SAFETY".equals(blockReason) || "PROHIBITED_CONTENT".equals(blockReason)
+                                || "IMAGE_SAFETY".equals(blockReason) || "SPII".equals(blockReason)) {
+                            errSink.append("تم حظر الاستجابة بواسطة فلاتر السلامة (")
+                                    .append(blockReason).append(").");
+                        }
                         JSONObject content = candidate.optJSONObject("content");
                         if (content != null) {
                             JSONArray respParts = content.optJSONArray("parts");
