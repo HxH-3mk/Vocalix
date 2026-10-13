@@ -40,18 +40,13 @@ public class VocalixAiClient {
 
     public static final String MODEL_AUTO = "auto";
 
-    // Standard prioritized model list per provider with maximum free quotas first
+    // Standard prioritized model list per provider with ultra-fast models first
     public static final List<String> GEMINI_MODELS = Arrays.asList(
-            "gemini-3.5-flash-lite", // 500 RPD & 15 RPM
-            "gemini-3.1-flash-lite", // 500 RPD & 15 RPM
-            "gemini-2.0-flash",      // Rapid native multimodal
-            "gemini-2.0-flash-lite", // Rapid lite multimodal
-            "gemini-1.5-flash",      // High reliability audio
-            "gemini-3.8-flash",      // Latest 3.8 flash
-            "gemini-3.6-flash",      // 3.6 flash
-            "gemini-3.7-flash",      // 3.7 flash
-            "gemini-2.5-flash",      // 2.5 flash
-            "gemini-2.5-flash-lite", // 2.5 flash lite
+            "gemini-2.0-flash",      // Ultra-fast instant native audio processing
+            "gemini-2.0-flash-lite", // Ultra-fast lightweight multimodal
+            "gemini-1.5-flash",      // Universal high reliability fallback
+            "gemini-2.5-flash",      // Next-gen 2.5 flash
+            "gemini-2.5-flash-lite", // Next-gen 2.5 flash lite
             "gemini-1.5-pro"         // Deep context audio
     );
 
@@ -404,108 +399,107 @@ public class VocalixAiClient {
 
             String lastError = null;
             for (String modelName : modelQueue) {
-                String[] apiVersions = new String[]{"v1beta", "v1"};
-                for (String ver : apiVersions) {
-                    HttpURLConnection conn = null;
-                    try {
-                        String endpoint = "https://generativelanguage.googleapis.com/" + ver + "/models/" + modelName + ":streamGenerateContent?alt=sse&key=" + apiKey;
-                        URL url = new URL(endpoint);
-                        conn = (HttpURLConnection) url.openConnection();
-                        conn.setRequestMethod("POST");
-                        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                        conn.setRequestProperty("Accept", "text/event-stream");
-                        conn.setConnectTimeout(12000);
-                        conn.setReadTimeout(50000);
-                        conn.setDoOutput(true);
+                HttpURLConnection conn = null;
+                try {
+                    String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse&key=" + apiKey;
+                    URL url = new URL(endpoint);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                    conn.setRequestProperty("Accept", "text/event-stream");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(45000);
+                    conn.setDoOutput(true);
 
-                        try (OutputStream os = conn.getOutputStream()) {
-                            os.write(postData);
-                            os.flush();
-                        }
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(postData);
+                        os.flush();
+                    }
 
-                        int code = conn.getResponseCode();
-                        if (code >= 200 && code < 300) {
-                            StringBuilder accumulatedText = new StringBuilder();
-                            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    line = line.trim();
-                                    if (line.startsWith("data:")) {
-                                        String jsonStr = line.substring(5).trim();
-                                        if (jsonStr.isEmpty() || "[DONE]".equalsIgnoreCase(jsonStr)) continue;
-                                        try {
-                                            JSONObject respJson = new JSONObject(jsonStr);
-                                            JSONArray candidates = respJson.optJSONArray("candidates");
-                                            if (candidates != null && candidates.length() > 0) {
-                                                JSONObject candidate = candidates.getJSONObject(0);
-                                                JSONObject content = candidate.optJSONObject("content");
-                                                if (content != null) {
-                                                    JSONArray respParts = content.optJSONArray("parts");
-                                                    if (respParts != null && respParts.length() > 0) {
-                                                        for (int p = 0; p < respParts.length(); p++) {
-                                                            JSONObject pObj = respParts.optJSONObject(p);
-                                                            if (pObj != null) {
-                                                                String chunk = pObj.optString("text", "");
-                                                                if (!chunk.isEmpty()) {
-                                                                    accumulatedText.append(chunk);
-                                                                    callback.onPartialChunk(accumulatedText.toString());
-                                                                }
+                    int code = conn.getResponseCode();
+                    if (code >= 200 && code < 300) {
+                        StringBuilder accumulatedText = new StringBuilder();
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                line = line.trim();
+                                if (line.startsWith("data:")) {
+                                    String jsonStr = line.substring(5).trim();
+                                    if (jsonStr.isEmpty() || "[DONE]".equalsIgnoreCase(jsonStr)) continue;
+                                    try {
+                                        JSONObject respJson = new JSONObject(jsonStr);
+                                        JSONArray candidates = respJson.optJSONArray("candidates");
+                                        if (candidates != null && candidates.length() > 0) {
+                                            JSONObject candidate = candidates.getJSONObject(0);
+                                            JSONObject content = candidate.optJSONObject("content");
+                                            if (content != null) {
+                                                JSONArray respParts = content.optJSONArray("parts");
+                                                if (respParts != null && respParts.length() > 0) {
+                                                    for (int p = 0; p < respParts.length(); p++) {
+                                                        JSONObject pObj = respParts.optJSONObject(p);
+                                                        if (pObj != null) {
+                                                            String chunk = pObj.optString("text", "");
+                                                            if (!chunk.isEmpty()) {
+                                                                accumulatedText.append(chunk);
+                                                                callback.onPartialChunk(accumulatedText.toString());
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
-                                        } catch (Exception ignored) {}
-                                    }
+                                        }
+                                    } catch (Exception ignored) {}
                                 }
-                            }
-
-                            String finalTranscribed = accumulatedText.toString().trim();
-                            if (!finalTranscribed.isEmpty()) {
-                                callback.onSuccess(finalTranscribed);
-                                return;
-                            }
-                        } else if (code == 429) {
-                            Log.w(TAG, "Quota / Rate limit reached on " + modelName + " (" + ver + "), auto-switching to next model...");
-                            lastError = "تم استنفاد الحد اليومي للنموذج (" + modelName + ")، جاري التبديل التلقائي للنموذج التالي...";
-                            break; // Skip to next model immediately!
-                        } else if (code == 404 || code == 503) {
-                            lastError = "النموذج غير متوفر أو قيد الصيانة مؤقتاً (" + modelName + ")";
-                        } else {
-                            StringBuilder errResp = new StringBuilder();
-                            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"))) {
-                                String l;
-                                while ((l = reader.readLine()) != null) errResp.append(l);
-                            } catch (Exception ignored) {}
-                            String errBody = errResp.toString();
-                            try {
-                                JSONObject errJson = new JSONObject(errBody);
-                                JSONObject errObj = errJson.optJSONObject("error");
-                                if (errObj != null) {
-                                    String msg = errObj.optString("message", errBody);
-                                    if (msg.contains("API key") || msg.contains("API_KEY_INVALID")) {
-                                        callback.onError("مفتاح API غير صالح. تأكد من نسخه بشكل صحيح.");
-                                        return;
-                                    }
-                                    if (msg.contains("Resource has been exhausted") || msg.contains("Quota exceeded") || msg.contains("rate limit")) {
-                                        Log.w(TAG, "Quota error on " + modelName + ", auto-switching to next model...");
-                                        lastError = "تم تجاوز حد استخدام " + modelName + "، جاري التحويل لنموذج بديل...";
-                                        break;
-                                    }
-                                    lastError = msg;
-                                } else {
-                                    lastError = errBody;
-                                }
-                            } catch (Exception parseEx) {
-                                lastError = errBody;
                             }
                         }
 
-                    } catch (Exception e) {
-                        lastError = e.getMessage();
-                    } finally {
-                        if (conn != null) conn.disconnect();
+                        String finalTranscribed = accumulatedText.toString().trim();
+                        if (!finalTranscribed.isEmpty()) {
+                            callback.onSuccess(finalTranscribed);
+                            return;
+                        }
+                    } else if (code == 429) {
+                        Log.w(TAG, "Quota / Rate limit reached on " + modelName + ", auto-switching to next model...");
+                        lastError = "تم استنفاد الحد اليومي للنموذج (" + modelName + ")، جاري التبديل التلقائي للنموذج التالي...";
+                        continue;
+                    } else if (code == 404 || code == 400 || code == 503) {
+                        Log.w(TAG, "Model unavailable (" + code + ") on " + modelName + ", auto-switching to next model...");
+                        lastError = "النموذج غير متوفر أو قيد الصيانة مؤقتاً (" + modelName + ")";
+                        continue;
+                    } else {
+                        StringBuilder errResp = new StringBuilder();
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"))) {
+                            String l;
+                            while ((l = reader.readLine()) != null) errResp.append(l);
+                        } catch (Exception ignored) {}
+                        String errBody = errResp.toString();
+                        try {
+                            JSONObject errJson = new JSONObject(errBody);
+                            JSONObject errObj = errJson.optJSONObject("error");
+                            if (errObj != null) {
+                                String msg = errObj.optString("message", errBody);
+                                if (msg.contains("API key") || msg.contains("API_KEY_INVALID")) {
+                                    callback.onError("مفتاح API غير صالح. تأكد من نسخه بشكل صحيح.");
+                                    return;
+                                }
+                                if (msg.contains("Resource has been exhausted") || msg.contains("Quota exceeded") || msg.contains("rate limit")) {
+                                    Log.w(TAG, "Quota error on " + modelName + ", auto-switching to next model...");
+                                    lastError = "تم تجاوز حد استخدام " + modelName + "، جاري التحويل لنموذج بديل...";
+                                    continue;
+                                }
+                                lastError = msg;
+                            } else {
+                                lastError = errBody;
+                            }
+                        } catch (Exception parseEx) {
+                            lastError = errBody;
+                        }
                     }
+
+                } catch (Exception e) {
+                    lastError = e.getMessage();
+                } finally {
+                    if (conn != null) conn.disconnect();
                 }
             }
 
@@ -657,57 +651,55 @@ public class VocalixAiClient {
             }
 
             for (String mName : queue) {
-                for (String ver : new String[]{"v1beta", "v1"}) {
-                    HttpURLConnection conn = null;
-                    try {
-                        URL url = new URL("https://generativelanguage.googleapis.com/" + ver + "/models/" + mName + ":generateContent?key=" + apiKey);
-                        conn = (HttpURLConnection) url.openConnection();
-                        conn.setRequestMethod("POST");
-                        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                        conn.setConnectTimeout(12000);
-                        conn.setReadTimeout(25000);
-                        conn.setDoOutput(true);
+                HttpURLConnection conn = null;
+                try {
+                    URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + mName + ":generateContent?key=" + apiKey);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                    conn.setConnectTimeout(8000);
+                    conn.setReadTimeout(20000);
+                    conn.setDoOutput(true);
 
-                        try (OutputStream os = conn.getOutputStream()) {
-                            os.write(postData);
-                            os.flush();
-                        }
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(postData);
+                        os.flush();
+                    }
 
-                        int code = conn.getResponseCode();
-                        InputStream stream = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
-                        StringBuilder resp = new StringBuilder();
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) resp.append(line);
-                        }
+                    int code = conn.getResponseCode();
+                    InputStream stream = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+                    StringBuilder resp = new StringBuilder();
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) resp.append(line);
+                    }
 
-                        if (code >= 200 && code < 300) {
-                            JSONObject respJson = new JSONObject(resp.toString());
-                            JSONArray candidates = respJson.optJSONArray("candidates");
-                            if (candidates != null && candidates.length() > 0) {
-                                JSONObject candidate = candidates.getJSONObject(0);
-                                JSONObject content = candidate.optJSONObject("content");
-                                if (content != null) {
-                                    JSONArray respParts = content.optJSONArray("parts");
-                                    if (respParts != null && respParts.length() > 0) {
-                                        StringBuilder full = new StringBuilder();
-                                        for (int p = 0; p < respParts.length(); p++) {
-                                            JSONObject pObj = respParts.optJSONObject(p);
-                                            if (pObj != null) full.append(pObj.optString("text", ""));
-                                        }
-                                        String sumStr = full.toString().trim();
-                                        if (!sumStr.isEmpty()) {
-                                            callback.onSuccess(sumStr);
-                                            return;
-                                        }
+                    if (code >= 200 && code < 300) {
+                        JSONObject respJson = new JSONObject(resp.toString());
+                        JSONArray candidates = respJson.optJSONArray("candidates");
+                        if (candidates != null && candidates.length() > 0) {
+                            JSONObject candidate = candidates.getJSONObject(0);
+                            JSONObject content = candidate.optJSONObject("content");
+                            if (content != null) {
+                                JSONArray respParts = content.optJSONArray("parts");
+                                if (respParts != null && respParts.length() > 0) {
+                                    StringBuilder full = new StringBuilder();
+                                    for (int p = 0; p < respParts.length(); p++) {
+                                        JSONObject pObj = respParts.optJSONObject(p);
+                                        if (pObj != null) full.append(pObj.optString("text", ""));
+                                    }
+                                    String sumStr = full.toString().trim();
+                                    if (!sumStr.isEmpty()) {
+                                        callback.onSuccess(sumStr);
+                                        return;
                                     }
                                 }
                             }
                         }
-                    } catch (Exception ignored) {
-                    } finally {
-                        if (conn != null) conn.disconnect();
                     }
+                } catch (Exception ignored) {
+                } finally {
+                    if (conn != null) conn.disconnect();
                 }
             }
 
