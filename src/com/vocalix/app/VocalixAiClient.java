@@ -17,10 +17,17 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Vocalix AI Client
@@ -29,6 +36,11 @@ import java.util.List;
  * 2. OpenAI (Audio Transcriptions via Whisper / Audio models)
  * 3. Anthropic Claude (via Claude reasoning engine for text / transcript summarization)
  * 4. Groq (Ultra-fast Whisper-Large models)
+ *
+ * Smart model selection: models that return 404/unsupported are blacklisted permanently
+ * (they simply do not exist for this key), while models that hit quota/rate limits (429)
+ * or maintenance (503) enter a temporary cooldown window derived from RetryInfo so heavy
+ * uploads never get wasted on an exhausted model again the same day.
  */
 public class VocalixAiClient {
     private static final String TAG = "VocalixAiClient";
@@ -40,15 +52,16 @@ public class VocalixAiClient {
 
     public static final String MODEL_AUTO = "auto";
 
-    // Standard prioritized model list per provider with ultra-fast and high quota models first
+    // Standard prioritized model list per provider with ultra-fast and high quota models first.
+    // NOTE: entries whose daily free quota is already saturated (e.g. gemini-3.8-flash at 21/20 RPD)
+    // were removed from the default priority queue; they remain available if explicitly chosen by
+    // the user and will be auto-cooled-down via the smart cooldown engine when they return 429.
     public static final List<String> GEMINI_MODELS = Arrays.asList(
             "gemini-3.5-flash-lite", // 500 RPD ultra-fast lightweight
             "gemini-3.1-flash-lite", // 500 RPD ultra-fast lightweight
+            "gemini-2.5-flash-lite", // Next-gen lightweight multimodal, generous RPD
             "gemini-2.5-flash",      // Next-gen ultra-fast multimodal
-            "gemini-2.5-flash-lite", // Next-gen lightweight multimodal
-            "gemini-2.0-flash",      // Rapid native multimodal
-            "gemini-1.5-flash",      // Highly reliable standard multimodal
-            "gemini-1.5-flash-8b"    // Ultra-lightweight fallback
+            "gemini-1.5-flash"       // Highly reliable standard multimodal
     );
 
     public static final List<String> OPENAI_MODELS = Arrays.asList(
@@ -83,6 +96,113 @@ public class VocalixAiClient {
         void onResult(boolean success, String message, List<String> models);
     }
 
+    // ==========================================
+    // Smart model health / cooldown engine
+    // ==========================================
+
+    /** Models confirmed unavailable for this account (404) - skipped permanently this session. */
+    private static final java.util.Set<String> BLACKLISTED_MODELS =
+            Collections.synchronizedSet(new java.util.HashSet<String>());
+    /** modelName -> epoch millis until which the model should not be retried (429 / 503). */
+    private static final Map<String, Long> MODEL_COOLDOWN_UNTIL = Collections.synchronizedMap(new HashMap<String, Long>());
+
+    private static long parseRetryDelayMs(String errBody) {
+        try {
+            JSONObject errObj = new JSONObject(errBody).optJSONObject("error");
+            if (errObj == null) return 0;
+            JSONArray details = errObj.optJSONArray("details");
+            if (details != null) {
+                for (int i = 0; i < details.length(); i++) {
+                    JSONObject d = details.optJSONObject(i);
+                    if (d == null || !d.optString("@type", "").contains("RetryInfo")) continue;
+                    int secs = d.optInt("retryDelay", 0);
+                    String rd = d.optString("retryDelay", "");
+                    if (rd.endsWith("s") && rd.length() > 1) {
+                        try { secs = (int) Double.parseDouble(rd.replace("s", "").trim()); } catch (Exception ignored) {}
+                    }
+                    if (secs > 0) return Math.min(secs, 3600) * 1000L;
+                }
+            }
+        } catch (Exception ignored) {}
+        return 0;
+    }
+
+    private static void markModelUnavailable(String modelName, int httpCode, String errBody) {
+        if (httpCode == 404 || (errBody != null && (errBody.contains("not found") || errBody.contains("is not supported")))) {
+            BLACKLISTED_MODELS.add(modelName);
+            Log.w(TAG, "Model blacklisted (unavailable for this key): " + modelName);
+            return;
+        }
+        long ms;
+        if (httpCode == 429) {
+            long hinted = parseRetryDelayMs(errBody);
+            ms = hinted > 0 ? hinted : 30_000L;
+        } else { // 503 and other transient server states
+            ms = 60_000L;
+        }
+        MODEL_COOLDOWN_UNTIL.put(modelName, System.currentTimeMillis() + ms);
+        Log.w(TAG, "Model cooled down for " + ms / 1000 + "s: " + modelName);
+    }
+
+    private static boolean isModelAvailable(String modelName) {
+        if (BLACKLISTED_MODELS.contains(modelName)) return false;
+        Long until = MODEL_COOLDOWN_UNTIL.get(modelName);
+        return until == null || until <= System.currentTimeMillis();
+    }
+
+    /**
+     * Builds the ordered attempt queue: user-chosen model first (if healthy), then every
+     * known/fetched model sorted by priority, silently skipping blacklisted and cooling models.
+     */
+    private static List<String> buildModelQueue(List<String> priorities, List<String> extraKnown, String userChosenModel, boolean isAutoMode) {
+        List<String> ordered = new ArrayList<>();
+        if (!isAutoMode && userChosenModel != null && !userChosenModel.isEmpty()) {
+            ordered.add(userChosenModel.replace("models/", ""));
+        }
+        ArrayDeque<String> rest = new ArrayDeque<>();
+        for (String m : priorities) if (!ordered.contains(m)) rest.add(m);
+        if (extraKnown != null) {
+            for (String m : extraKnown) {
+                String name = m.replace("models/", "");
+                if (!ordered.contains(name) && !rest.contains(name)) rest.add(name);
+            }
+        }
+        // Move unhealthy models to the back instead of dropping them entirely:
+        // if all preferred models fail we still give them one last chance.
+        List<String> degraded = new ArrayList<>();
+        for (String m : rest) {
+            if (isModelAvailable(m)) ordered.add(m); else degraded.add(m);
+        }
+        ordered.addAll(degraded);
+        return ordered;
+    }
+
+    /** Human-readable status of the smart cooldown engine (shown in Settings after key test). */
+    public static String getModelHealthReport() {
+        StringBuilder sb = new StringBuilder();
+        if (!BLACKLISTED_MODELS.isEmpty()) {
+            sb.append("غير متوفر نهائياً لهذا المفتاح: ").append(String.join(", ", BLACKLISTED_MODELS)).append("\n");
+        }
+        if (!MODEL_COOLDOWN_UNTIL.isEmpty()) {
+            SimpleDateFormat df = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            List<String> parts = new ArrayList<>();
+            synchronized (MODEL_COOLDOWN_UNTIL) {
+                for (Map.Entry<String, Long> e : MODEL_COOLDOWN_UNTIL.entrySet()) {
+                    long left = e.getValue() - System.currentTimeMillis();
+                    if (left > 0) parts.add(e.getKey() + " (حتى " + df.format(new Date(e.getValue())) + ")");
+                }
+            }
+            if (!parts.isEmpty()) sb.append("رصيد مستنفد مؤقتاً: ").append(String.join("، ", parts));
+        }
+        return sb.toString().trim();
+    }
+
+    /** Clears learned blacklist/cooldowns (e.g. when the user switches API keys). */
+    public static void resetModelHealth() {
+        BLACKLISTED_MODELS.clear();
+        MODEL_COOLDOWN_UNTIL.clear();
+    }
+
     /**
      * Inspect API key and dynamically retrieve supported models.
      */
@@ -105,6 +225,7 @@ public class VocalixAiClient {
                     if (modelsFound.isEmpty()) {
                         modelsFound.addAll(GEMINI_MODELS);
                     }
+                    sKnownGeminiModels = new ArrayList<>(modelsFound);
                     callback.onResult(true, "تم فحص مفتاح Gemini بنجاح! (" + modelsFound.size() + " نموذج متوفر)", modelsFound);
 
                 } else if (PROVIDER_OPENAI.equalsIgnoreCase(provider)) {
@@ -112,6 +233,7 @@ public class VocalixAiClient {
                     if (modelsFound.isEmpty()) {
                         modelsFound.addAll(OPENAI_MODELS);
                     }
+                    sKnownOpenAiModels = new ArrayList<>(modelsFound);
                     callback.onResult(true, "تم فحص مفتاح OpenAI بنجاح! (" + modelsFound.size() + " نموذج)", modelsFound);
 
                 } else if (PROVIDER_CLAUDE.equalsIgnoreCase(provider)) {
@@ -126,6 +248,7 @@ public class VocalixAiClient {
                     if (modelsFound.isEmpty()) {
                         modelsFound.addAll(GROQ_MODELS);
                     }
+                    sKnownGroqModels = new ArrayList<>(modelsFound);
                     callback.onResult(true, "تم فحص مفتاح Groq بنجاح! (" + modelsFound.size() + " نموذج)", modelsFound);
                 } else {
                     callback.onResult(false, "مزود الذكاء الاصطناعي غير معروف", Collections.emptyList());
@@ -141,9 +264,10 @@ public class VocalixAiClient {
     private static void queryGeminiModels(String version, String apiKey, List<String> resultList) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL("https://generativelanguage.googleapis.com/" + version + "/models?key=" + apiKey);
+            URL url = new URL("https://generativelanguage.googleapis.com/" + version + "/models?pageSize=1000");
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("x-goog-api-key", apiKey);
             conn.setConnectTimeout(8000);
             conn.setReadTimeout(8000);
             int code = conn.getResponseCode();
@@ -174,59 +298,6 @@ public class VocalixAiClient {
             }
         } catch (Exception e) {
             Log.w(TAG, "Gemini models query error: " + e.getMessage());
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    /**
-     * Rapid pre-check to verify model availability and quota readiness before sending heavy audio payloads.
-     */
-    private static boolean checkModelReadiness(String modelName, String apiKey) {
-        HttpURLConnection conn = null;
-        try {
-            // First check model resource metadata via GET (instant 0-payload query)
-            URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + "?key=" + apiKey);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
-            int code = conn.getResponseCode();
-            if (code == 404 || code == 429) {
-                return false;
-            }
-            if (code >= 200 && code < 300) {
-                return true;
-            }
-            // If GET metadata returns 400 or other code, attempt a tiny ping (1-token generateContent)
-            return testModelGenerationPing(modelName, apiKey);
-        } catch (Exception e) {
-            // In case of network jitter or timeout, don't falsely block the model
-            return true;
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    private static boolean testModelGenerationPing(String modelName, String apiKey) {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
-            conn.setDoOutput(true);
-            String tinyPayload = "{\"contents\":[{\"parts\":[{\"text\":\"hi\"}]}],\"generationConfig\":{\"maxOutputTokens\":1}}";
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(tinyPayload.getBytes("UTF-8"));
-                os.flush();
-            }
-            int code = conn.getResponseCode();
-            return (code != 404 && code != 429 && code != 503);
-        } catch (Exception e) {
-            return true;
         } finally {
             if (conn != null) conn.disconnect();
         }
@@ -337,6 +408,11 @@ public class VocalixAiClient {
     // Unified Audio Transcription
     // ==========================================
 
+    /** Live model ids discovered via fetchAvailableModels(), used to enrich the failover queue. */
+    private static volatile List<String> sKnownGeminiModels = null;
+    private static volatile List<String> sKnownOpenAiModels = null;
+    private static volatile List<String> sKnownGroqModels = null;
+
     public static void transcribe(File audioFile, String mimeType, String provider, String chosenModel, String apiKey, boolean splitSpeakers, TranscribeCallback callback) {
         new Thread(() -> {
             try {
@@ -353,9 +429,13 @@ public class VocalixAiClient {
                 String targetProvider = (provider != null && !provider.isEmpty()) ? provider : PROVIDER_GEMINI;
 
                 if (PROVIDER_OPENAI.equalsIgnoreCase(targetProvider)) {
-                    transcribeWithOpenAi(audioFile, "https://api.openai.com/v1/audio/transcriptions", chosenModel != null ? chosenModel : "whisper-1", cleanKey, splitSpeakers, callback);
+                    List<String> q = buildModelQueue(OPENAI_MODELS, sKnownOpenAiModels, chosenModel,
+                            chosenModel == null || chosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(chosenModel));
+                    transcribeWithOpenAiFallback(audioFile, "https://api.openai.com/v1/audio/transcriptions", q, OPENAI_MODELS.get(0), cleanKey, splitSpeakers, callback);
                 } else if (PROVIDER_GROQ.equalsIgnoreCase(targetProvider)) {
-                    transcribeWithOpenAi(audioFile, "https://api.groq.com/openai/v1/audio/transcriptions", chosenModel != null ? chosenModel : "whisper-large-v3", cleanKey, splitSpeakers, callback);
+                    List<String> q = buildModelQueue(GROQ_MODELS, sKnownGroqModels, chosenModel,
+                            chosenModel == null || chosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(chosenModel));
+                    transcribeWithOpenAiFallback(audioFile, "https://api.groq.com/openai/v1/audio/transcriptions", q, GROQ_MODELS.get(0), cleanKey, splitSpeakers, callback);
                 } else if (PROVIDER_CLAUDE.equalsIgnoreCase(targetProvider)) {
                     callback.onError("نموذج Claude يتخصص في التلخيص ومعالجة النصوص. يرجى اختيار Gemini أو OpenAI أو Groq للتفريغ الصوتي.");
                 } else {
@@ -369,232 +449,533 @@ public class VocalixAiClient {
         }).start();
     }
 
+    /** Max bytes allowed for a single inline (base64) upload attempt (~20MB is the API request cap). */
+    private static final long MAX_INLINE_FILE_BYTES = 20L * 1024 * 1024;
+    /** Files above this size are uploaded via the Gemini Files API (real multipart, memory-safe). */
+    private static final long LARGE_FILE_FILES_API_BYTES = 25L * 1024 * 1024;
+    /** Chunk size (raw audio bytes) per request when large files fall back to sequential chunks. */
+    private static final int CHUNK_RAW_BYTES = 5 * 1024 * 1024;
+    private static final Charset UTF8 = Charset.forName("UTF-8");
+
     private static void transcribeWithGemini(File audioFile, String mimeType, String userChosenModel, String apiKey, boolean splitSpeakers, TranscribeCallback callback) {
         try {
-            byte[] audioBytes;
-            try (FileInputStream fis = new FileInputStream(audioFile);
-                 ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                byte[] buf = new byte[8192];
-                int r;
-                while ((r = fis.read(buf)) != -1) bos.write(buf, 0, r);
-                audioBytes = bos.toByteArray();
+            // ---- Smart model queue: skips blacklisted (404) and cooling (429/503) models first ----
+            boolean isAutoMode = (userChosenModel == null || userChosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(userChosenModel));
+            List<String> modelQueue = buildModelQueue(GEMINI_MODELS, sKnownGeminiModels, userChosenModel, isAutoMode);
+            if (modelQueue.isEmpty()) {
+                callback.onError("لا توجد نماذج Gemini متاحة لهذا المفتاح حالياً.");
+                return;
             }
 
+            // ---- MIME detection from magic header bytes only (no full-file read) ----
+            byte[] head = new byte[16];
+            int headRead = 0;
+            try (FileInputStream fis = new FileInputStream(audioFile)) {
+                headRead = fis.read(head);
+            }
             String effectiveMime = mimeType;
             if (effectiveMime == null || effectiveMime.isEmpty() || effectiveMime.contains("octet")) {
-                effectiveMime = detectMime(audioBytes);
+                effectiveMime = detectMime(Arrays.copyOf(head, Math.max(headRead, 0)));
             }
 
-            String base64Audio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
+            long fileSize = audioFile.length();
+            StringBuilder accumulated = new StringBuilder();
 
-            JSONObject rootPayload = new JSONObject();
-            String systemInstructionText;
-            String userPromptText;
-
-            if (splitSpeakers) {
-                systemInstructionText = "You are Vocalix AI, an elite multilingual audio transcription and multi-speaker diarization engine.\n\n" +
-                        "CRITICAL SPEAKER DIARIZATION REQUIREMENT:\n" +
-                        "1. You MUST identify and separate EVERY speaker in the audio (whether 2, 3, 4, 5 or more distinct voices/turns).\n" +
-                        "2. Every change of speaker or turn MUST start on a new paragraph with their speaker label:\n" +
-                        "   • If Arabic:\n" +
-                        "     المتحدث 1: [كلام المتحدث الأول]\n" +
-                        "     المتحدث 2: [كلام المتحدث الثاني]\n" +
-                        "     المتحدث 3: [كلام المتحدث الثالث]\n" +
-                        "     المتحدث 4: [كلام المتحدث الرابع]\n" +
-                        "   • If English:\n" +
-                        "     Speaker 1: [Text]\n" +
-                        "     Speaker 2: [Text]\n" +
-                        "     Speaker 3: [Text]\n" +
-                        "   • Or corresponding native language speaker label.\n" +
-                        "3. Even if speech is rapid or overlapping, analyze pitch, tone, and conversational turns to distinguish between different speakers.\n" +
-                        "4. Never merge different speakers into a single block of text.\n" +
-                        "5. Output ONLY the transcription with speaker tags. No preamble, no notes, no metadata.";
-                userPromptText = "Carefully listen to this audio recording and transcribe it with STRICT SPEAKER SEPARATION (Diarization).\n" +
-                        "Distinguish between all voices (Speaker 1, Speaker 2, Speaker 3, Speaker 4, etc.).\n" +
-                        "For Arabic audio, format every speaker turn on a new line as:\n" +
-                        "المتحدث 1: ...\nالمتحدث 2: ...\nالمتحدث 3: ...\n\n" +
-                        "Start transcription directly:";
-            } else {
-                systemInstructionText = "You are Vocalix AI, an elite multilingual speech transcription system. Transcribe the spoken audio with maximum fidelity into its native spoken language with accurate punctuation. Output the clean transcribed text only without commentary.";
-                userPromptText = "Transcribe this audio recording into clean text with punctuation in its spoken language. Output text only.";
+            // ---- Very large files: one real multipart upload through the official Files API ----
+            if (fileSize > LARGE_FILE_FILES_API_BYTES &&
+                    tryGeminiFileApiUpload(audioFile, effectiveMime, modelQueue, apiKey, splitSpeakers, accumulated, callback)) {
+                return; // success or terminal error already delivered
             }
 
-            JSONObject sysPart = new JSONObject();
-            sysPart.put("text", systemInstructionText);
-            JSONArray sysParts = new JSONArray();
-            sysParts.put(sysPart);
-            JSONObject sysInstruction = new JSONObject();
-            sysInstruction.put("parts", sysParts);
-            rootPayload.put("systemInstruction", sysInstruction);
-
-            JSONObject inlineData = new JSONObject();
-            inlineData.put("mimeType", effectiveMime);
-            inlineData.put("data", base64Audio);
-
-            JSONObject partAudio = new JSONObject();
-            partAudio.put("inlineData", inlineData);
-            JSONObject partPrompt = new JSONObject();
-            partPrompt.put("text", userPromptText);
-
-            JSONArray partsArray = new JSONArray();
-            partsArray.put(partAudio);
-            partsArray.put(partPrompt);
-
-            JSONObject contentObj = new JSONObject();
-            contentObj.put("parts", partsArray);
-            JSONArray contentsArray = new JSONArray();
-            contentsArray.put(contentObj);
-            rootPayload.put("contents", contentsArray);
-
-            JSONObject genConfig = new JSONObject();
-            genConfig.put("temperature", 0.1);
-            // Explicitly disable Thinking mode: give answers directly without hesitation or thinking delay
-            JSONObject thinkingConfig = new JSONObject();
-            thinkingConfig.put("thinking_budget", 0);
-            genConfig.put("thinkingConfig", thinkingConfig);
-            rootPayload.put("generationConfig", genConfig);
-
-            byte[] postData = rootPayload.toString().getBytes("UTF-8");
-
-            boolean isAutoMode = (userChosenModel == null || userChosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(userChosenModel));
-            List<String> modelQueue = new ArrayList<>();
-            if (!isAutoMode) {
-                // User explicitly selected a specific model - prioritize it as first choice
-                modelQueue.add(userChosenModel.replace("models/", ""));
-            }
-            // Always append prioritized fast high-quota models so failover or retry can seamlessly continue
-            for (String pref : GEMINI_MODELS) {
-                if (!modelQueue.contains(pref)) {
-                    modelQueue.add(pref);
+            if (fileSize <= MAX_INLINE_FILE_BYTES) {
+                // Single-pass upload: base64 streams directly into the request body without
+                // ever materializing the whole encoded file in memory (OOM-safe).
+                GeminiResult res = runGeminiAttempt(modelQueue, apiKey, audioFile, -1, -1, effectiveMime,
+                        splitSpeakers, accumulated, callback);
+                if (res == GeminiResult.SUCCESS) {
+                    callback.onSuccess(accumulated.toString().trim());
+                    return;
                 }
+                if (res == GeminiResult.FATAL) return; // onError already delivered
+                String learned = LAST_GEMINI_ERROR != null ? LAST_GEMINI_ERROR : "";
+                callback.onError("تعذر التفريغ عبر Gemini على جميع النماذج المتاحة (" + modelQueue.size() + " نموذج). " + learned + " جرّب لاحقاً بعد إعادة تعيين الحصة اليومية أو مزوداً آخر مثل Groq المجاني.");
+                return;
             }
 
-            String lastError = null;
-            for (int i = 0; i < modelQueue.size(); i++) {
-                String modelName = modelQueue.get(i);
-
-                HttpURLConnection conn = null;
-                try {
-                    String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse&key=" + apiKey;
-                    URL url = new URL(endpoint);
-                    conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                    conn.setRequestProperty("Accept", "text/event-stream");
-                    conn.setConnectTimeout(10000);
-                    conn.setReadTimeout(45000);
-                    conn.setDoOutput(true);
-
-                    try (OutputStream os = conn.getOutputStream()) {
-                        os.write(postData);
-                        os.flush();
-                    }
-
-                    int code = conn.getResponseCode();
-                    if (code >= 200 && code < 300) {
-                        StringBuilder accumulatedText = new StringBuilder();
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                line = line.trim();
-                                if (line.startsWith("data:")) {
-                                    String jsonStr = line.substring(5).trim();
-                                    if (jsonStr.isEmpty() || "[DONE]".equalsIgnoreCase(jsonStr)) continue;
-                                    try {
-                                        JSONObject respJson = new JSONObject(jsonStr);
-                                        JSONArray candidates = respJson.optJSONArray("candidates");
-                                        if (candidates != null && candidates.length() > 0) {
-                                            JSONObject candidate = candidates.getJSONObject(0);
-                                            JSONObject content = candidate.optJSONObject("content");
-                                            if (content != null) {
-                                                JSONArray respParts = content.optJSONArray("parts");
-                                                if (respParts != null && respParts.length() > 0) {
-                                                    for (int p = 0; p < respParts.length(); p++) {
-                                                        JSONObject pObj = respParts.optJSONObject(p);
-                                                        if (pObj != null) {
-                                                            String chunk = pObj.optString("text", "");
-                                                            if (!chunk.isEmpty()) {
-                                                                accumulatedText.append(chunk);
-                                                                callback.onPartialChunk(accumulatedText.toString());
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } catch (Exception ignored) {}
-                                }
-                            }
-                        }
-
-                        String finalTranscribed = accumulatedText.toString().trim();
-                        if (!finalTranscribed.isEmpty()) {
-                            callback.onSuccess(finalTranscribed);
-                            return;
-                        }
-                    } else {
-                        StringBuilder errResp = new StringBuilder();
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"))) {
-                            String l;
-                            while ((l = reader.readLine()) != null) errResp.append(l);
-                        } catch (Exception ignored) {}
-                        String errBody = errResp.toString();
-                        Log.e(TAG, "Gemini API error (" + code + ") on [" + modelName + "]: " + errBody);
-
-                        String errMsg = errBody;
-                        try {
-                            JSONObject errJson = new JSONObject(errBody);
-                            JSONObject errObj = errJson.optJSONObject("error");
-                            if (errObj != null) {
-                                errMsg = errObj.optString("message", errBody);
-                            }
-                        } catch (Exception ignored) {}
-
-                        if (errMsg.contains("API key") || errMsg.contains("API_KEY_INVALID") || errMsg.contains("API key not valid")) {
-                            callback.onError("مفتاح API غير صالح أو غير صحيح. يرجى التحقق من المفتاح في الإعدادات.");
-                            return;
-                        }
-
-                        // Check quota limits (429)
-                        if (code == 429 || errMsg.contains("Resource has been exhausted") || errMsg.contains("Quota exceeded") || errMsg.contains("rate limit")) {
-                            Log.w(TAG, "Quota error on " + modelName + ", switching to next available fallback...");
-                            lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري تجربة النموذج التالي...";
-                            continue;
-                        }
-
-                        // Check model not found / unsupported (404)
-                        if (code == 404 || errMsg.contains("not found") || errMsg.contains("is not supported")) {
-                            Log.w(TAG, "Model " + modelName + " not found or unsupported, switching to next...");
-                            lastError = "النموذج غير متوفر (" + modelName + ")";
-                            continue;
-                        }
-
-                        // Service temporary unavailable (503)
-                        if (code == 503) {
-                            lastError = "النموذج قيد الصيانة مؤقتاً (" + modelName + ")";
-                            continue;
-                        }
-
-                        // Any other client error (e.g. 400 Bad Request, payload issue) - fail immediately without useless loops
-                        callback.onError("خطأ من Google (" + modelName + "): " + errMsg);
-                        return;
-                    }
-
-                } catch (Exception e) {
-                    lastError = "خطأ في الاتصال (" + modelName + "): " + e.getMessage();
-                } finally {
-                    if (conn != null) conn.disconnect();
+            // ---- Large file fallback: automatic sequential chunking ----
+            long chunkCount = (fileSize + CHUNK_RAW_BYTES - 1) / CHUNK_RAW_BYTES;
+            callback.onPartialChunk("ملف كبير: يتم التفريغ على " + chunkCount + " أجزاء متتالية...\n");
+            long offset = 0;
+            int partNo = 1;
+            while (offset < fileSize) {
+                int len = (int) Math.min(CHUNK_RAW_BYTES, fileSize - offset);
+                GeminiResult res = runGeminiAttempt(modelQueue, apiKey, audioFile, offset, len, effectiveMime,
+                        splitSpeakers, accumulated, callback);
+                if (res == GeminiResult.FATAL) return;
+                if (res != GeminiResult.SUCCESS) {
+                    callback.onError("تعذر إكمال الجزء " + partNo + "/" + chunkCount + " من الملف. تأكد من توفر رصيد في أحد النماذج أو استخدم ملفاً أقصر.");
+                    return;
                 }
+                offset += len;
+                partNo++;
+                if (offset < fileSize) accumulated.append("\n");
             }
-
-            callback.onError(lastError != null ? lastError : "تعذر الاتصال بخوادم Google. تأكد من اتصالك بالإنترنت وصلاحية المفتاح.");
+            callback.onSuccess(accumulated.toString().trim());
 
         } catch (Exception e) {
             callback.onError("خطأ: " + e.getMessage());
         }
     }
 
-    private static void transcribeWithOpenAi(File audioFile, String endpointUrl, String modelName, String apiKey, boolean splitSpeakers, TranscribeCallback callback) {
+    private enum GeminiResult { SUCCESS, RETRY_NEXT_MODEL, FATAL }
+
+    private static volatile String LAST_GEMINI_ERROR = null;
+
+    /**
+     * Runs one transcription pass through the model queue. Streams base64 audio straight into
+     * the HTTP body (fixed-size buffering, no giant allocations), parses SSE tokens, and records
+     * learned model health (blacklist/cooldown) automatically.
+     */
+    private static GeminiResult runGeminiAttempt(List<String> modelQueue, String apiKey, File audioFile,
+                                                long rangeStart, long rangeLen, String mime,
+                                                boolean splitSpeakers, StringBuilder accumulated,
+                                                TranscribeCallback callback) {
+        final int b64Len;
+        if (rangeLen >= 0) {
+            b64Len = (int) (((rangeLen + 2) / 3) * 4);
+        } else {
+            b64Len = (int) (((audioFile.length() + 2) / 3) * 4);
+        }
+        byte[] headBuf = new byte[4096];
+        byte[] tailBuf = new byte[4096];
+        final int prefixLen, suffixLen;
+        try {
+            JSONObject probe = buildGeminiPayload(mime, splitSpeakers, true);
+            String probeStr = probe.toString();
+            int idx = probeStr.indexOf("@@BASE64@@");
+            byte[] pre = probeStr.substring(0, idx).getBytes(UTF8);
+            byte[] suf = probeStr.substring(idx + "@@BASE64@@".length()).getBytes(UTF8);
+            System.arraycopy(pre, 0, headBuf, 0, pre.length);
+            System.arraycopy(suf, 0, tailBuf, 0, suf.length);
+            prefixLen = pre.length;
+            suffixLen = suf.length;
+        } catch (Exception e) {
+            callback.onError("خطأ في تجهيز الطلب: " + e.getMessage());
+            return GeminiResult.FATAL;
+        }
+        final int totalLen = prefixLen + b64Len + suffixLen;
+
+        String lastError = null;
+        for (String modelName : modelQueue) {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("x-goog-api-key", apiKey); // key in header: never leaks via URLs/logs
+                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                conn.setRequestProperty("Accept", "text/event-stream");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(60000);
+                conn.setFixedLengthStreamingMode(totalLen);
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(headBuf, 0, prefixLen);
+                    writeBase64Range(os, audioFile, rangeStart, rangeLen);
+                    os.write(tailBuf, 0, suffixLen);
+                    os.flush();
+                }
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    StringBuilder errSink = new StringBuilder();
+                    if (parseSseStream(conn, accumulated, callback, errSink)) return GeminiResult.SUCCESS;
+                    markModelUnavailable(modelName, code, errSink.toString());
+                    lastError = "انقطع الرد من " + modelName + " دون نص مفيد.";
+                    continue;
+                }
+
+                String errBody = readStream(conn.getErrorStream());
+                Log.e(TAG, "Gemini API error (" + code + ") on [" + modelName + "]: " + errBody);
+
+                String errMsg = errBody;
+                try {
+                    JSONObject errObj = new JSONObject(errBody).optJSONObject("error");
+                    if (errObj != null) errMsg = errObj.optString("message", errBody);
+                } catch (Exception ignored) {}
+
+                if (code == 401 || code == 403 || errMsg.contains("API key") || errMsg.contains("API_KEY_INVALID")) {
+                    callback.onError("مفتاح API غير صالح أو لا يملك صلاحية الطلب. يرجى التحقق من المفتاح في الإعدادات.");
+                    return GeminiResult.FATAL;
+                }
+                if (code == 429 || errMsg.contains("Resource has been exhausted") || errMsg.contains("Quota exceeded") || errMsg.contains("rate limit")) {
+                    markModelUnavailable(modelName, 429, errBody);
+                    lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري تجربة النموذج التالي...";
+                    continue;
+                }
+                if (code == 404 || errMsg.contains("not found") || errMsg.contains("is not supported")) {
+                    markModelUnavailable(modelName, 404, errBody);
+                    lastError = "النموذج غير متوفر (" + modelName + ")";
+                    continue;
+                }
+                if (code == 503) {
+                    markModelUnavailable(modelName, 503, errBody);
+                    lastError = "النموذج قيد الصيانة مؤقتاً (" + modelName + ")";
+                    continue;
+                }
+                if (code >= 500) {
+                    markModelUnavailable(modelName, code, errBody);
+                    lastError = "خطأ خادم مؤقت من Google (" + modelName + ")";
+                    continue;
+                }
+                // Other client errors (e.g. 400 Bad Request) are payload issues - identical for every model.
+                callback.onError("خطأ من Google (" + modelName + "): " + errMsg);
+                return GeminiResult.FATAL;
+
+            } catch (SocketTimeoutException ste) {
+                lastError = "انتهت مهلة الاستجابة (" + modelName + "). قد يكون المقطع طويلاً جداً لهذا النموذج.";
+            } catch (UnknownHostException uhe) {
+                callback.onError("تعذر الوصول إلى خوادم Google. تحقق من اتصال الإنترنت.");
+                return GeminiResult.FATAL;
+            } catch (Exception e) {
+                lastError = "خطأ في الاتصال (" + modelName + "): " + e.getMessage();
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }
+        LAST_GEMINI_ERROR = lastError;
+        return GeminiResult.RETRY_NEXT_MODEL;
+    }
+
+    /**
+     * Uploads the whole file once through the Gemini Files API, then transcribes it by file_uri
+     * with SSE streaming. Returns true if the outcome was terminal (success or fatal onError),
+     * false to fall back to inline/chunked mode.
+     */
+    private static boolean tryGeminiFileApiUpload(File audioFile, String mime, List<String> modelQueue, String apiKey,
+                                                  boolean splitSpeakers, StringBuilder accumulated, TranscribeCallback callback) {
+        String fileUri = null;
+        try {
+            callback.onPartialChunk("ملف كبير جداً: يتم الرفع عبر Files API بدون ترميز Base64...\n");
+            fileUri = geminiUploadFile(audioFile, mime, apiKey);
+            if (fileUri == null) return false; // upload failed -> fallback to chunked inline mode
+
+            String lastError = null;
+            for (String modelName : modelQueue) {
+                HttpURLConnection conn = null;
+                try {
+                    JSONObject rootPayload = buildGeminiPayload(mime, splitSpeakers, false);
+                    JSONArray partsArr = rootPayload.getJSONArray("contents").getJSONObject(0).getJSONArray("parts");
+                    partsArr.put(0, fileDataPart(mime, fileUri));
+
+                    URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse");
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("x-goog-api-key", apiKey);
+                    conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                    conn.setRequestProperty("Accept", "text/event-stream");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(120000);
+                    conn.setDoOutput(true);
+                    byte[] body = rootPayload.toString().getBytes(UTF8);
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(body);
+                        os.flush();
+                    }
+
+                    int code = conn.getResponseCode();
+                    if (code >= 200 && code < 300) {
+                        StringBuilder errSink = new StringBuilder();
+                        if (parseSseStream(conn, accumulated, callback, errSink)) {
+                            callback.onSuccess(accumulated.toString().trim());
+                            return true;
+                        }
+                        markModelUnavailable(modelName, code, errSink.toString());
+                        lastError = "انقطع الرد من " + modelName + " دون نص مفيد.";
+                        continue;
+                    }
+                    String errBody = readStream(conn.getErrorStream());
+                    if (code == 401 || code == 403) {
+                        callback.onError("مفتاح API غير صالح. يرجى التحقق من المفتاح في الإعدادات.");
+                        return true;
+                    }
+                    if (code == 429 || code == 404 || code == 503 || code >= 500) {
+                        markModelUnavailable(modelName, code, errBody);
+                        lastError = "النموذج " + modelName + " غير متاح حالياً (" + code + ")، جاري تجربة البديل...";
+                        continue;
+                    }
+                    callback.onError("خطأ من Google (" + modelName + "): " + errBody);
+                    return true;
+                } catch (Exception e) {
+                    lastError = "خطأ في الاتصال (" + modelName + "): " + e.getMessage();
+                } finally {
+                    if (conn != null) conn.disconnect();
+                }
+            }
+            callback.onError(lastError != null ? lastError : "تعذر التفريغ عبر Files API على جميع النماذج المتاحة.");
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "Files API path failed, falling back to inline chunks: " + e.getMessage());
+            return false;
+        } finally {
+            if (fileUri != null) geminiDeleteFile(fileUri, apiKey);
+        }
+    }
+
+    /** Streams the audio file as multipart/related to upload/*; returns the file URI or null. */
+    private static String geminiUploadFile(File f, String mime, String apiKey) {
+        HttpURLConnection conn = null;
+        try {
+            String boundary = "VocalixBoundary" + System.currentTimeMillis();
+            byte[] meta = multipartMetadata(boundary, mime);
+            byte[] trailer = ("\r\n--" + boundary + "--\r\n").getBytes(UTF8);
+            URL url = new URL("https://generativelanguage.googleapis.com/upload/v1beta/files");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("x-goog-api-key", apiKey);
+            conn.setRequestProperty("X-Goog-Upload-Protocol", "multipart");
+            conn.setRequestProperty("X-Goog-Upload-Command", "upload, finalize");
+            conn.setRequestProperty("X-Goog-Upload-Header-Content-Length", String.valueOf(f.length()));
+            conn.setRequestProperty("Content-Type", "multipart/related; boundary=" + boundary);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(300000);
+            conn.setFixedLengthStreamingMode(meta.length + f.length() + trailer.length);
+            conn.setDoOutput(true);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(meta);
+                try (FileInputStream fis = new FileInputStream(f)) {
+                    byte[] buf = new byte[64 * 1024];
+                    int r;
+                    while ((r = fis.read(buf)) != -1) os.write(buf, 0, r);
+                }
+                os.write(trailer);
+                os.flush();
+            }
+
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) {
+                String resp = readStream(conn.getInputStream());
+                JSONObject fileObj = new JSONObject(resp).optJSONObject("file");
+                if (fileObj != null) {
+                    if ("FAILED".equals(fileObj.optString("state", ""))) return null;
+                    String uri = fileObj.optString("uri", null);
+                    return (uri == null || uri.isEmpty()) ? null : uri;
+                }
+            } else {
+                Log.w(TAG, "Files API upload failed (" + code + "): " + readStream(conn.getErrorStream()));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Files API upload error: " + e.getMessage());
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return null;
+    }
+
+    private static byte[] multipartMetadata(String boundary, String mime) throws Exception {
+        JSONObject meta = new JSONObject();
+        meta.put("file", new JSONObject().put("display_name", "vocalix_audio"));
+        String part = "--" + boundary + "\r\n" +
+                "Content-Type: application/json; charset=UTF-8\r\n" +
+                "Content-ID: header\r\n\r\n" +
+                meta.toString() + "\r\n" +
+                "--" + boundary + "\r\n" +
+                "Content-Type: " + mime + "\r\n\r\n";
+        return part.getBytes(UTF8);
+    }
+
+    private static JSONObject fileDataPart(String mime, String fileUri) throws Exception {
+        JSONObject fileRef = new JSONObject();
+        fileRef.put("mimeType", mime);
+        fileRef.put("file_uri", fileUri);
+        JSONObject refPart = new JSONObject();
+        refPart.put("file_data", fileRef);
+        return refPart;
+    }
+
+    private static void geminiDeleteFile(String fileUri, String apiKey) {
+        HttpURLConnection conn = null;
+        try {
+            String name = fileUri.substring(fileUri.lastIndexOf("/files/") + 1); // -> files/xxxx
+            URL url = new URL("https://generativelanguage.googleapis.com/v1beta/" + name);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.setRequestProperty("x-goog-api-key", apiKey);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.getResponseCode();
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static JSONObject buildGeminiPayload(String mime, boolean splitSpeakers, boolean withAudioPlaceholder) throws Exception {
+        String systemInstructionText;
+        String userPromptText;
+        if (splitSpeakers) {
+            systemInstructionText = "You are Vocalix AI, an elite multilingual audio transcription and multi-speaker diarization engine.\n\n" +
+                    "CRITICAL SPEAKER DIARIZATION REQUIREMENT:\n" +
+                    "1. You MUST identify and separate EVERY speaker in the audio (whether 2, 3, 4, 5 or more distinct voices/turns).\n" +
+                    "2. Every change of speaker or turn MUST start on a new paragraph with their speaker label:\n" +
+                    "   If Arabic:\n" +
+                    "     المتحدث 1: [كلام المتحدث الأول]\n" +
+                    "     المتحدث 2: [كلام المتحدث الثاني]\n" +
+                    "     المتحدث 3: [كلام المتحدث الثالث]\n" +
+                    "     المتحدث 4: [كلام المتحدث الرابع]\n" +
+                    "   If English:\n" +
+                    "     Speaker 1: [Text]\n" +
+                    "     Speaker 2: [Text]\n" +
+                    "     Speaker 3: [Text]\n"
+                    + "   Or corresponding native language speaker label.\n" +
+                    "3. Even if speech is rapid or overlapping, analyze pitch, tone, and conversational turns to distinguish between different speakers.\n" +
+                    "4. Never merge different speakers into a single block of text.\n" +
+                    "5. Output ONLY the transcription with speaker tags. No preamble, no notes, no metadata.\n" +
+                    "6. This audio may be one segment of a longer recording: do NOT greet and do NOT comment on it being partial, just transcribe.";
+            userPromptText = "Carefully listen to this audio recording and transcribe it with STRICT SPEAKER SEPARATION (Diarization).\n" +
+                    "Distinguish between all voices (Speaker 1, Speaker 2, Speaker 3, Speaker 4, etc.).\n" +
+                    "For Arabic audio, format every speaker turn on a new line as:\n" +
+                    "المتحدث 1: ...\nالمتحدث 2: ...\nالمتحدث 3: ...\n\n" +
+                    "Start transcription directly:";
+        } else {
+            systemInstructionText = "You are Vocalix AI, an elite multilingual speech transcription system. Transcribe the spoken audio with maximum fidelity into its native spoken language with accurate punctuation. Output the clean transcribed text only without commentary.";
+            userPromptText = "Transcribe this audio recording into clean text with punctuation in its spoken language. Output text only.";
+        }
+
+        JSONObject rootPayload = new JSONObject();
+        JSONObject sysPart = new JSONObject();
+        sysPart.put("text", systemInstructionText);
+        JSONArray sysParts = new JSONArray();
+        sysParts.put(sysPart);
+        JSONObject sysInstruction = new JSONObject();
+        sysInstruction.put("parts", sysParts);
+        rootPayload.put("systemInstruction", sysInstruction);
+
+        JSONObject inlineData = new JSONObject();
+        inlineData.put("mimeType", mime);
+        inlineData.put("data", withAudioPlaceholder ? "@@BASE64@@" : "");
+        JSONObject partAudio = new JSONObject();
+        partAudio.put("inlineData", inlineData);
+        JSONObject partPrompt = new JSONObject();
+        partPrompt.put("text", userPromptText);
+
+        JSONArray partsArray = new JSONArray();
+        partsArray.put(partAudio);
+        partsArray.put(partPrompt);
+
+        JSONObject contentObj = new JSONObject();
+        contentObj.put("parts", partsArray);
+        JSONArray contentsArray = new JSONArray();
+        contentsArray.put(contentObj);
+        rootPayload.put("contents", contentsArray);
+
+        JSONObject genConfig = new JSONObject();
+        genConfig.put("temperature", 0.1);
+        genConfig.put("maxOutputTokens", 32768);
+        // Explicitly disable Thinking mode: direct answers without thinking delay
+        JSONObject thinkingConfig = new JSONObject();
+        thinkingConfig.put("thinking_budget", 0);
+        genConfig.put("thinkingConfig", thinkingConfig);
+        rootPayload.put("generationConfig", genConfig);
+        return rootPayload;
+    }
+
+    /** Streams base64 of (part of) a file into the output without loading the file fully in RAM. */
+    private static void writeBase64Range(OutputStream os, File f, long start, long len) throws Exception {
+        final int IN_CHUNK = 3 * 1024 * 1024; // multiple of 3 -> aligned base64 blocks
+        byte[] buf = new byte[IN_CHUNK];
+        try (FileInputStream fis = new FileInputStream(f);
+             android.util.Base64OutputStream b64 = new android.util.Base64OutputStream(os, Base64.NO_WRAP)) {
+            if (start > 0) {
+                long skip = start;
+                while (skip > 0) {
+                    long s = fis.skip(skip);
+                    if (s <= 0) break;
+                    skip -= s;
+                }
+            }
+            long remaining = len >= 0 ? len : Long.MAX_VALUE;
+            while (remaining > 0) {
+                int toRead = (int) Math.min(IN_CHUNK, remaining);
+                int r = fis.read(buf, 0, toRead);
+                if (r <= 0) break;
+                b64.write(buf, 0, r);
+                remaining -= r;
+            }
+        }
+    }
+
+    /** Parses an SSE response, appending transcript chunks. Returns true if usable text arrived. */
+    private static boolean parseSseStream(HttpURLConnection conn, StringBuilder accumulated,
+                                          TranscribeCallback callback, StringBuilder errSink) {
+        int beforeLen = accumulated.length();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), UTF8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.startsWith("data:")) continue;
+                String jsonStr = line.substring(5).trim();
+                if (jsonStr.isEmpty() || "[DONE]".equalsIgnoreCase(jsonStr)) continue;
+                try {
+                    JSONObject respJson = new JSONObject(jsonStr);
+                    JSONObject errObj = respJson.optJSONObject("error");
+                    if (errObj != null) errSink.append(errObj.optString("message", ""));
+                    JSONArray candidates = respJson.optJSONArray("candidates");
+                    if (candidates != null && candidates.length() > 0) {
+                        JSONObject candidate = candidates.getJSONObject(0);
+                        JSONObject content = candidate.optJSONObject("content");
+                        if (content != null) {
+                            JSONArray respParts = content.optJSONArray("parts");
+                            if (respParts != null) {
+                                for (int p = 0; p < respParts.length(); p++) {
+                                    JSONObject pObj = respParts.optJSONObject(p);
+                                    if (pObj != null) {
+                                        String chunk = pObj.optString("text", "");
+                                        if (!chunk.isEmpty()) {
+                                            accumulated.append(chunk);
+                                            callback.onPartialChunk(accumulated.toString());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception e) {
+            errSink.append(e.getMessage() == null ? "" : e.getMessage());
+        }
+        return accumulated.length() > beforeLen;
+    }
+
+    private static String readStream(InputStream is) {
+        if (is == null) return "";
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, UTF8))) {
+            String l;
+            while ((l = reader.readLine()) != null) sb.append(l);
+        } catch (Exception ignored) {}
+        return sb.toString();
+    }
+
+    /** Tries each healthy model in the queue; only fatal errors (bad key / payload) stop iteration. */
+    private static void transcribeWithOpenAiFallback(File audioFile, String endpointUrl, List<String> modelQueue,
+                                                     String defaultModel, String apiKey, boolean splitSpeakers,
+                                                     TranscribeCallback callback) {
+        if (modelQueue.isEmpty()) modelQueue = new ArrayList<>(Arrays.asList(defaultModel));
+        String lastError = null;
+        for (String m : modelQueue) {
+            int[] outcome = new int[1]; // 0 success, 1 retry next, 2 fatal
+            lastError = transcribeWithOpenAi(audioFile, endpointUrl, m, apiKey, splitSpeakers, callback, outcome);
+            if (outcome[0] == 0 || outcome[0] == 2) return;
+        }
+        callback.onError(lastError != null ? lastError : "تعذر التفريغ عبر هذا المزود على جميع النماذج المتاحة.");
+    }
+
+    private static String transcribeWithOpenAi(File audioFile, String endpointUrl, String modelName, String apiKey, boolean splitSpeakers, TranscribeCallback callback, int[] outcome) {
+        outcome[0] = 1;
         HttpURLConnection conn = null;
         try {
             String boundary = "===Vocalix" + System.currentTimeMillis() + "===";
@@ -659,19 +1040,52 @@ public class VocalixAiClient {
                 JSONObject json = new JSONObject(resp.toString());
                 String text = json.optString("text", "");
                 if (!text.trim().isEmpty()) {
+                    outcome[0] = 0;
                     callback.onSuccess(text.trim());
-                } else {
-                    callback.onError("لم يتم استخراج أي نص من الملف الصوتي.");
+                    return null;
                 }
-            } else {
-                callback.onError("خطأ من المزود (" + code + "): " + resp.toString());
+                outcome[0] = 2;
+                callback.onError("لم يتم استخراج أي نص من الملف الصوتي (قد يكون صامتاً أو طويلاً جداً).");
+                return null;
             }
 
+            String body = resp.toString();
+            Log.e(TAG, providerNameOf(endpointUrl) + " error (" + code + ") on [" + modelName + "]: " + body);
+            if (code == 401 || code == 403 || body.contains("invalid_api_key") || body.contains("API key")) {
+                outcome[0] = 2;
+                callback.onError("مفتاح API غير صالح لهذا المزود. يرجى التحقق من المفتاح في الإعدادات.");
+                return null;
+            }
+            if (code == 404 || body.contains("model_not_found") || body.contains("does not exist") || body.contains("is not supported")) {
+                BLACKLISTED_MODELS.add(modelName);
+                return "النموذج " + modelName + " غير متوفر، جاري تجربة بديل...";
+            }
+            if (code == 429) {
+                MODEL_COOLDOWN_UNTIL.put(modelName, System.currentTimeMillis() + 60_000L);
+                return "تم استنفاد حصة " + modelName + "، جاري تجربة النموذج التالي...";
+            }
+            if (code >= 500) {
+                return "خطأ خادم مؤقت من " + providerNameOf(endpointUrl) + " (" + modelName + ")";
+            }
+            // 4xx payload issues (e.g. file too large) are model-independent -> fail fast with guidance
+            outcome[0] = 2;
+            String hint = (code == 413 || body.toLowerCase().contains("too large") || body.toLowerCase().contains("max"))
+                    ? " الملف الصوتي كبير جداً لهذا المزود (الحد ~25MB لـ Whisper). جرّب Gemini مع التقسيم التلقائي أو ملفاً أقصر."
+                    : "";
+            callback.onError("خطأ من " + providerNameOf(endpointUrl) + " (" + code + "):" + hint + " " + body);
+            return null;
+
         } catch (Exception e) {
+            outcome[0] = 2;
             callback.onError("خطأ في الاتصال بالمزود: " + e.getMessage());
+            return null;
         } finally {
             if (conn != null) conn.disconnect();
         }
+    }
+
+    private static String providerNameOf(String endpointUrl) {
+        return endpointUrl.contains("groq.com") ? "Groq" : "OpenAI";
     }
 
     // ==========================================
@@ -742,22 +1156,16 @@ public class VocalixAiClient {
             byte[] postData = rootPayload.toString().getBytes("UTF-8");
 
             boolean isAutoMode = (model == null || model.isEmpty() || MODEL_AUTO.equalsIgnoreCase(model));
-            List<String> queue = new ArrayList<>();
-            if (!isAutoMode) {
-                queue.add(model.replace("models/", ""));
-            }
-            // Populate fallback models in order of speed and high quota
-            for (String m : GEMINI_MODELS) {
-                if (!queue.contains(m)) queue.add(m);
-            }
+            List<String> queue = buildModelQueue(GEMINI_MODELS, sKnownGeminiModels, model, isAutoMode);
 
             String lastSumError = null;
             for (String mName : queue) {
                 HttpURLConnection conn = null;
                 try {
-                    URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + mName + ":generateContent?key=" + apiKey);
+                    URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + mName + ":generateContent");
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("POST");
+                    conn.setRequestProperty("x-goog-api-key", apiKey);
                     conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                     conn.setConnectTimeout(8000);
                     conn.setReadTimeout(20000);
@@ -799,6 +1207,11 @@ public class VocalixAiClient {
                             }
                         }
                     } else {
+                        if (code == 401 || code == 403) {
+                            callback.onError("مفتاح API غير صالح. يرجى التحقق من المفتاح في الإعدادات.");
+                            return;
+                        }
+                        if (code == 429 || code == 404 || code == 503 || code >= 500) markModelUnavailable(mName, code, resp.toString());
                         Log.w(TAG, "Summarize failed on " + mName + " (" + code + "), trying next model...");
                         lastSumError = "النموذج " + mName + " (" + code + ")";
                     }
