@@ -1311,7 +1311,7 @@ public class MainActivity extends Activity {
 
     private void showModelPickerDialog() {
         String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
-        String currentModel = prefs.getString(KEY_AI_MODEL, "gemini-2.0-flash");
+        String currentModel = prefs.getString(KEY_AI_MODEL, VocalixAiClient.MODEL_AUTO);
         String apiKey = prefs.getString(KEY_API_KEY, "");
 
         List<String> defaultList = VocalixAiClient.GEMINI_MODELS;
@@ -1648,7 +1648,7 @@ public class MainActivity extends Activity {
         NotificationHelper.showTranscribingNotification(this);
 
         String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
-        String model = prefs.getString(KEY_AI_MODEL, "gemini-2.0-flash");
+        String model = prefs.getString(KEY_AI_MODEL, VocalixAiClient.MODEL_AUTO);
         boolean splitSpeakers = prefs.getBoolean("split_speakers", true);
 
         VocalixAiClient.transcribe(currentRawAudioFile, currentMimeType, provider, model, apiKey, splitSpeakers, new VocalixAiClient.TranscribeCallback() {
@@ -1715,7 +1715,7 @@ public class MainActivity extends Activity {
         }
 
         String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
-        String model = prefs.getString(KEY_AI_MODEL, "gemini-2.0-flash");
+        String model = prefs.getString(KEY_AI_MODEL, VocalixAiClient.MODEL_AUTO);
 
         VocalixAiClient.summarizeText(text, provider, model, apiKey, new VocalixAiClient.SummarizeCallback() {
             @Override

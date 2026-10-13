@@ -178,6 +178,36 @@ public class VocalixAiClient {
         }
     }
 
+    /**
+     * Rapid pre-check to verify model availability and quota readiness before sending heavy audio payloads.
+     */
+    private static boolean checkModelReadiness(String modelName, String apiKey) {
+        HttpURLConnection conn = null;
+        try {
+            // First check model resource metadata (lightning fast GET request with 0 payload)
+            URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + "?key=" + apiKey);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(4000);
+            conn.setReadTimeout(4000);
+            int code = conn.getResponseCode();
+            if (code == 404) {
+                // Model not accessible or not found
+                return false;
+            }
+            if (code == 429) {
+                // Quota already exhausted
+                return false;
+            }
+            return (code >= 200 && code < 300);
+        } catch (Exception e) {
+            // If network pre-check times out or fails, allow normal attempt rather than falsely blocking
+            return true;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
     private static void queryOpenAiModels(String apiKey, List<String> resultList) {
         HttpURLConnection conn = null;
         try {
@@ -402,6 +432,17 @@ public class VocalixAiClient {
             String lastError = null;
             for (int i = 0; i < modelQueue.size(); i++) {
                 String modelName = modelQueue.get(i);
+
+                // Quick pre-check: verify model responsiveness before uploading large audio payload
+                if (!checkModelReadiness(modelName, apiKey)) {
+                    Log.w(TAG, "Model " + modelName + " failed quick readiness check (quota or unavailable), skipping...");
+                    if (!isAutoMode) {
+                        callback.onError("النموذج المختار (" + modelName + ") غير جاهز حالياً أو استنفد حده اليومي. يرجى اختيار نموذج آخر أو تفعيل الوضع التلقائي.");
+                        return;
+                    }
+                    continue;
+                }
+
                 HttpURLConnection conn = null;
                 try {
                     String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse&key=" + apiKey;
