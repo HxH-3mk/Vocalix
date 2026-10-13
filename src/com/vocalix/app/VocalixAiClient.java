@@ -392,19 +392,28 @@ public class VocalixAiClient {
             String userPromptText;
 
             if (splitSpeakers) {
-                systemInstructionText = "You are Vocalix AI, an elite multilingual speech transcription system with expert native Speaker Diarization capability.\n\n" +
-                        "Core Mission:\n" +
-                        "Transcribe the spoken audio with maximum fidelity into the EXACT native language spoken in the recording.\n" +
-                        "Apply accurate punctuation and natural sentence boundaries. Remove hesitation stutters.\n\n" +
-                        "STRICT SPEAKER DIARIZATION RULES:\n" +
-                        "1. If multiple speakers or conversational turns exist, label each speaker turn on a new line STRICTLY IN THE NATIVE LANGUAGE OF THE SPEAKERS:\n" +
-                        "   • If Arabic: 'المتحدث 1: ...' / 'المتحدث 2: ...'\n" +
-                        "   • If English: 'Speaker 1: ...' / 'Speaker 2: ...'\n" +
-                        "   • If Spanish: 'Hablante 1: ...' / 'Hablante 2: ...'\n" +
-                        "   • If French: 'Intervenant 1: ...' / 'Intervenant 2: ...'\n" +
-                        "   • Or corresponding native term for other languages.\n" +
-                        "2. Output ONLY clean transcribed text without greetings or intro.";
-                userPromptText = "Transcribe this audio recording into its spoken language. If multiple speakers exist, label each turn on a new line using the speaker label in THAT SAME spoken language (e.g., 'المتحدث 1:' for Arabic, 'Speaker 1:' for English). Output text only.";
+                systemInstructionText = "You are Vocalix AI, an elite multilingual audio transcription and multi-speaker diarization engine.\n\n" +
+                        "CRITICAL SPEAKER DIARIZATION REQUIREMENT:\n" +
+                        "1. You MUST identify and separate EVERY speaker in the audio (whether 2, 3, 4, 5 or more distinct voices/turns).\n" +
+                        "2. Every change of speaker or turn MUST start on a new paragraph with their speaker label:\n" +
+                        "   • If Arabic:\n" +
+                        "     المتحدث 1: [كلام المتحدث الأول]\n" +
+                        "     المتحدث 2: [كلام المتحدث الثاني]\n" +
+                        "     المتحدث 3: [كلام المتحدث الثالث]\n" +
+                        "     المتحدث 4: [كلام المتحدث الرابع]\n" +
+                        "   • If English:\n" +
+                        "     Speaker 1: [Text]\n" +
+                        "     Speaker 2: [Text]\n" +
+                        "     Speaker 3: [Text]\n" +
+                        "   • Or corresponding native language speaker label.\n" +
+                        "3. Even if speech is rapid or overlapping, analyze pitch, tone, and conversational turns to distinguish between different speakers.\n" +
+                        "4. Never merge different speakers into a single block of text.\n" +
+                        "5. Output ONLY the transcription with speaker tags. No preamble, no notes, no metadata.";
+                userPromptText = "Carefully listen to this audio recording and transcribe it with STRICT SPEAKER SEPARATION (Diarization).\n" +
+                        "Distinguish between all voices (Speaker 1, Speaker 2, Speaker 3, Speaker 4, etc.).\n" +
+                        "For Arabic audio, format every speaker turn on a new line as:\n" +
+                        "المتحدث 1: ...\nالمتحدث 2: ...\nالمتحدث 3: ...\n\n" +
+                        "Start transcription directly:";
             } else {
                 systemInstructionText = "You are Vocalix AI, an elite multilingual speech transcription system. Transcribe the spoken audio with maximum fidelity into its native spoken language with accurate punctuation. Output the clean transcribed text only without commentary.";
                 userPromptText = "Transcribe this audio recording into clean text with punctuation in its spoken language. Output text only.";
