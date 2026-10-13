@@ -66,7 +66,7 @@ public class HistoryManager {
 
     public static boolean isHistoryEnabled(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return sp.getBoolean(KEY_HISTORY_ENABLED, false);
+        return sp.getBoolean(KEY_HISTORY_ENABLED, true);
     }
 
     public static void setHistoryEnabled(Context context, boolean enabled) {
