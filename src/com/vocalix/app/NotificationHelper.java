@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -13,19 +13,19 @@ import android.os.PowerManager;
 
 public class NotificationHelper {
     public static final String KEY_BG_PROCESSING = "pref_bg_processing_notifications";
-    public static final String CHANNEL_ID = "voxscribe_transcribe_channel";
+    public static final String CHANNEL_ID = "vocalix_transcribe_channel";
     public static final int NOTIF_ID_TRANSCRIBING = 4001;
     public static final int NOTIF_ID_COMPLETE = 4002;
 
     private static PowerManager.WakeLock wakeLock = null;
 
     public static boolean isBgProcessingEnabled(Context context) {
-        SharedPreferences sp = context.getSharedPreferences("voxscribe_settings", Context.MODE_PRIVATE);
+        SharedPreferences sp = context.getSharedPreferences("vocalix_settings", Context.MODE_PRIVATE);
         return sp.getBoolean(KEY_BG_PROCESSING, false);
     }
 
     public static void setBgProcessingEnabled(Context context, boolean enabled) {
-        SharedPreferences sp = context.getSharedPreferences("voxscribe_settings", Context.MODE_PRIVATE);
+        SharedPreferences sp = context.getSharedPreferences("vocalix_settings", Context.MODE_PRIVATE);
         sp.edit().putBoolean(KEY_BG_PROCESSING, enabled).apply();
     }
 
@@ -137,7 +137,7 @@ public class NotificationHelper {
             try {
                 PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
                 if (pm != null) {
-                    wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "voxscribe:transcription_wakelock");
+                    wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vocalix:transcription_wakelock");
                     wakeLock.acquire(10 * 60 * 1000L); // 10 minutes safety timeout
                 }
             } catch (Exception ignored) {}

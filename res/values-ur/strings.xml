@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">دنیای تمام زبانوں کے لیے سمارٹ آڈیو ٹو ٹیکسٹ ٹرانسکرائبر</string>
     <string name="btn_pick_file">📁 آڈیو فائل منتخب کریں</string>
     <string name="btn_copy">کاپی</string>
@@ -21,7 +21,7 @@
     <string name="status_label">حالت:</string>
     <string name="status_idle">تیار • واٹس ایپ یا ٹیلیگرام سے آڈیو شیئر کریں یا فائل منتخب کریں</string>
     <string name="status_decoding">آڈیو فائل کا تجزیہ جاری ہے...</string>
-    <string name="status_transcribing">Google VoxScribe کے ذریعے ٹرانسکرپشن جاری ہے...</string>
+    <string name="status_transcribing">Google Vocalix کے ذریعے ٹرانسکرپشن جاری ہے...</string>
     <string name="status_success">ٹرانسکرپشن مکمل ہو گئی ✓</string>
     <string name="status_error">خرابی: </string>
 
@@ -43,7 +43,7 @@
     <string name="lang_system_default">خودکار (سسٹم ڈیفالٹ)</string>
     <string name="btn_save">محفوظ کریں</string>
     <string name="btn_cancel">منسوخ کریں</string>
-    <string name="settings_title">VoxScribe AI کی ترتیبات</string>
+    <string name="settings_title">Vocalix AI کی ترتیبات</string>
     <string name="settings_subtitle">API کی، زبان اور اختیارات سیٹ کریں</string>
     <string name="settings_key_title">🔑 Google AI کی (Gemini)</string>
     <string name="settings_key_desc">روزانہ 1,500 مفت درخواستیں</string>
@@ -126,7 +126,7 @@
     <string name="settings_backup_title">ہسٹری بیک اپ</string>
     <string name="settings_biometric_desc">ریکارڈز تک رسائی کے لیے فنگر پرنٹ یا اسکرین لاک درکار ہے</string>
     <string name="settings_biometric_title">ہسٹری کو بائیو میٹرک سے لاک کریں</string>
-    <string name="settings_info">VoxScribe گوگل کے سمارٹ ماڈلز (Gemini Flash) پر کام کرتا ہے۔\n• اپنی مفت API کلید حاصل کریں:\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">Vocalix گوگل کے سمارٹ ماڈلز (Gemini Flash) پر کام کرتا ہے۔\n• اپنی مفت API کلید حاصل کریں:\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">بیک اپ فائل سے ریکارڈز درآمد اور یکجا کریں</string>
     <string name="settings_restore_title">ہسٹری بحال کریں</string>
     <string name="biometric_disable_prompt_title">لاک غیر فعال کرنے کے لیے شناخت کی تصدیق کریں</string>
@@ -139,7 +139,7 @@
     <string name="settings_bg_notif_desc">پروسیسنگ کے دوران پس منظر میں کام جاری رکھیں اور نوٹیفکیشن دکھائیں</string>
     <string name="notif_channel_name">ٹرانسکرپشن کی صورتحال</string>
     <string name="notif_channel_desc">پس منظر میں پیش رفت اور تکمیل کی اطلاعات</string>
-    <string name="notif_transcribing_title">VoxScribe - آڈیو ٹرانسکرائب ہو رہی ہے</string>
+    <string name="notif_transcribing_title">Vocalix - آڈیو ٹرانسکرائب ہو رہی ہے</string>
     <string name="notif_transcribing_desc">پس منظر میں آڈیو کی پروسیسنگ جاری ہے...</string>
     <string name="notif_complete_title">ٹرانسکرپشن کامیابی سے مکمل ہو گئی ✓</string>
     <string name="notif_complete_desc">ایپ کھولنے اور متن و خلاصہ دیکھنے کے لیے ٹیپ کریں</string>

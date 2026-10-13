@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">Dünyadaki tüm diller için akıllı ses-metin dönüştürücü</string>
     <string name="btn_pick_file">📁 Ses Dosyası Seç</string>
     <string name="btn_copy">Kopyala</string>
@@ -21,11 +21,11 @@
     <string name="status_label">Durum:</string>
     <string name="status_idle">Hazır • WhatsApp/Telegram\'dan ses paylaşın veya dosya seçin</string>
     <string name="status_decoding">Ses dosyası okunuyor ve çözümleniyor...</string>
-    <string name="status_transcribing">Google VoxScribe ile transkripsiyon yapılıyor...</string>
+    <string name="status_transcribing">Google Vocalix ile transkripsiyon yapılıyor...</string>
     <string name="status_success">Transkripsiyon başarıyla tamamlandı ✓</string>
     <string name="status_error">Hata: </string>
 
-    <string name="share_tip">💡 Veya WhatsApp/Telegram\'dan bir ses seçip Paylaş → Sesi Çevir (VoxScribe) seçeneğine dokunun</string>
+    <string name="share_tip">💡 Veya WhatsApp/Telegram\'dan bir ses seçip Paylaş → Sesi Çevir (Vocalix) seçeneğine dokunun</string>
     <string name="result_header">Dönüştürülen Metin</string>
     <string name="hint_result">Dönüştürülen metin burada konuşulan dilde ve noktalamasıyla görünecektir...</string>
     <string name="summary_header">Konuşma Özeti</string>
@@ -43,7 +43,7 @@
     <string name="lang_system_default">Otomatik (Sistem Varsayılanı)</string>
     <string name="btn_save">Kaydet</string>
     <string name="btn_cancel">İptal</string>
-    <string name="settings_title">VoxScribe AI Ayarları</string>
+    <string name="settings_title">Vocalix AI Ayarları</string>
     <string name="settings_subtitle">API anahtarı, dil ve seçenekleri yapılandırın</string>
     <string name="settings_key_title">🔑 Google AI Anahtarı (Gemini)</string>
     <string name="settings_key_desc">Günde 1.500 ücretsiz istek</string>
@@ -126,7 +126,7 @@ Devam etmek istediğinize emin misiniz?</string>
     <string name="settings_backup_title">Geçmişi Yedekle</string>
     <string name="settings_biometric_desc">Transkriptlere erişmek için parmak izi veya ekran kilidi iste</string>
     <string name="settings_biometric_title">Geçmişi Biyometri ile Kilitle</string>
-    <string name="settings_info">VoxScribe, Google\'ın akıllı modelleriyle (Gemini Flash) çalışır.\n• Ücretsiz API anahtarınızı buradan alın:\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">Vocalix, Google\'ın akıllı modelleriyle (Gemini Flash) çalışır.\n• Ücretsiz API anahtarınızı buradan alın:\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">Yedekleme dosyasından transkriptleri içe aktar ve birleştir</string>
     <string name="settings_restore_title">Geçmişi Geri Yükle</string>
     <string name="biometric_disable_prompt_title">Kilidi Devre Dışı Bırakmak İçin Kimliği Doğrulayın</string>
@@ -139,11 +139,11 @@ Devam etmek istediğinize emin misiniz?</string>
     <string name="settings_bg_notif_desc">Dönüşümü arka planda çalışır durumda tutun ve yalnızca işleme sırasında bildirim gösterin</string>
     <string name="notif_channel_name">Transkript Durumu</string>
     <string name="notif_channel_desc">Arka planda transkript ilerlemesi ve tamamlanma bildirimleri</string>
-    <string name="notif_transcribing_title">VoxScribe - Ses Deşifre Ediliyor</string>
+    <string name="notif_transcribing_title">Vocalix - Ses Deşifre Ediliyor</string>
     <string name="notif_transcribing_desc">Arka planda ses işleniyor ve deşifre ediliyor...</string>
     <string name="notif_complete_title">Deşifre Başarıyla Tamamlandı ✓</string>
     <string name="notif_complete_desc">Uygulamayı açıp metni ve özeti görmek için dokunun</string>
     <string name="bg_notif_perm_required">Arka plan durumu için bildirim izni gereklidir</string>
     <string name="settings_coffee_title">☕ Geliştiriciyi Destekle (Buy Me a Coffee)</string>
-    <string name="settings_coffee_desc">VoxScribe\'ın ücretsiz, hızlı ve güncel kalmasına destek olun</string>
+    <string name="settings_coffee_desc">Vocalix\'ın ücretsiz, hızlı ve güncel kalmasına destek olun</string>
 </resources>

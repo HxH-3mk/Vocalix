@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -51,12 +51,12 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * VoxScribe - Modern Material 3 multilingual audio-to-text transcriber.
+ * Vocalix - Modern Material 3 multilingual audio-to-text transcriber.
  * Direct cloud-accelerated intelligence with automatic language detection,
  * speaker diarization, and smart conversational summaries.
  */
 public class MainActivity extends Activity {
-    private static final String TAG = "VoxScribeActivity";
+    private static final String TAG = "VocalixActivity";
     private static final int REQ_PICK_AUDIO = 1001;
     private static final int REQ_RECORD_AUDIO = 2001;
     private static final int REQ_BIOMETRIC_AUTH = 2002;
@@ -68,7 +68,7 @@ public class MainActivity extends Activity {
     private static final int AUTH_ACTION_BACKUP = 3;
     private int pendingAuthAction = 0;
 
-    private static final String PREFS_NAME = "voxscribe_settings";
+    private static final String PREFS_NAME = "vocalix_settings";
     private static final String KEY_AI_PROVIDER = "ai_provider";
     private static final String KEY_AI_MODEL = "ai_model";
     private static final String KEY_API_KEY = "gemini_api_key";
@@ -89,17 +89,17 @@ public class MainActivity extends Activity {
         String theme = sp.getString(KEY_APP_THEME, THEME_SYSTEM);
 
         if (THEME_LIGHT.equals(theme)) {
-            activity.setTheme(R.style.Theme_VoxScribe);
+            activity.setTheme(R.style.Theme_Vocalix);
         } else if (THEME_DARK.equals(theme)) {
-            activity.setTheme(R.style.Theme_VoxScribe_Dark);
+            activity.setTheme(R.style.Theme_Vocalix_Dark);
         } else if (THEME_AMOLED.equals(theme)) {
-            activity.setTheme(R.style.Theme_VoxScribe_Amoled);
+            activity.setTheme(R.style.Theme_Vocalix_Amoled);
         } else {
             int nightModeFlags = activity.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
             if (nightModeFlags == Configuration.UI_MODE_NIGHT_YES) {
-                activity.setTheme(R.style.Theme_VoxScribe_Dark);
+                activity.setTheme(R.style.Theme_Vocalix_Dark);
             } else {
-                activity.setTheme(R.style.Theme_VoxScribe);
+                activity.setTheme(R.style.Theme_Vocalix);
             }
         }
     }
@@ -883,10 +883,10 @@ public class MainActivity extends Activity {
         // Provider Selector (Gemini, OpenAI, Claude, Groq)
         if (settingsCardProviderPicker != null) {
             final String[] providers = {
-                    VoxScribeAiClient.PROVIDER_GEMINI,
-                    VoxScribeAiClient.PROVIDER_OPENAI,
-                    VoxScribeAiClient.PROVIDER_CLAUDE,
-                    VoxScribeAiClient.PROVIDER_GROQ
+                    VocalixAiClient.PROVIDER_GEMINI,
+                    VocalixAiClient.PROVIDER_OPENAI,
+                    VocalixAiClient.PROVIDER_CLAUDE,
+                    VocalixAiClient.PROVIDER_GROQ
             };
             final String[] providerNames = {
                     "Google Gemini AI (الأسرع والأوفر)",
@@ -896,7 +896,7 @@ public class MainActivity extends Activity {
             };
 
             settingsCardProviderPicker.setOnClickListener(v -> {
-                String curProv = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
+                String curProv = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
                 int curIdx = 0;
                 for (int i = 0; i < providers.length; i++) {
                     if (providers[i].equalsIgnoreCase(curProv)) {
@@ -909,7 +909,7 @@ public class MainActivity extends Activity {
                         .setSingleChoiceItems(providerNames, curIdx, (dlg, which) -> {
                             String chosen = providers[which];
                             prefs.edit().putString(KEY_AI_PROVIDER, chosen).apply();
-                            prefs.edit().putString(KEY_AI_MODEL, VoxScribeAiClient.MODEL_AUTO).apply();
+                            prefs.edit().putString(KEY_AI_MODEL, VocalixAiClient.MODEL_AUTO).apply();
                             dlg.dismiss();
                             refreshSettingsUI();
                             Toast.makeText(this, R.string.settings_saved_toast, Toast.LENGTH_SHORT).show();
@@ -962,13 +962,13 @@ public class MainActivity extends Activity {
 
         if (settingsBtnGetFree != null) {
             settingsBtnGetFree.setOnClickListener(v -> {
-                String provider = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
+                String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
                 String url = "https://aistudio.google.com/app/apikey";
-                if (VoxScribeAiClient.PROVIDER_OPENAI.equalsIgnoreCase(provider)) {
+                if (VocalixAiClient.PROVIDER_OPENAI.equalsIgnoreCase(provider)) {
                     url = "https://platform.openai.com/api-keys";
-                } else if (VoxScribeAiClient.PROVIDER_CLAUDE.equalsIgnoreCase(provider)) {
+                } else if (VocalixAiClient.PROVIDER_CLAUDE.equalsIgnoreCase(provider)) {
                     url = "https://console.anthropic.com/settings/keys";
-                } else if (VoxScribeAiClient.PROVIDER_GROQ.equalsIgnoreCase(provider)) {
+                } else if (VocalixAiClient.PROVIDER_GROQ.equalsIgnoreCase(provider)) {
                     url = "https://console.groq.com/keys";
                 }
                 try {
@@ -987,9 +987,9 @@ public class MainActivity extends Activity {
                     Toast.makeText(this, "يرجى كتابة أو لصق المفتاح أولاً", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                String provider = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
+                String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
                 Toast.makeText(this, "جاري فحص المفتاح واستخراج النماذج المتاحة...", Toast.LENGTH_SHORT).show();
-                VoxScribeAiClient.fetchAvailableModels(provider, testKey, (success, message, availableModels) -> {
+                VocalixAiClient.fetchAvailableModels(provider, testKey, (success, message, availableModels) -> {
                     runOnUiThread(() -> {
                         AlertDialog.Builder resDialog = new AlertDialog.Builder(this);
                         if (success) {
@@ -1310,24 +1310,24 @@ public class MainActivity extends Activity {
     }
 
     private void showModelPickerDialog() {
-        String provider = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
+        String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
         String currentModel = prefs.getString(KEY_AI_MODEL, "gemini-2.0-flash");
         String apiKey = prefs.getString(KEY_API_KEY, "");
 
-        List<String> defaultList = VoxScribeAiClient.GEMINI_MODELS;
-        if (VoxScribeAiClient.PROVIDER_OPENAI.equalsIgnoreCase(provider)) {
-            defaultList = VoxScribeAiClient.OPENAI_MODELS;
-        } else if (VoxScribeAiClient.PROVIDER_CLAUDE.equalsIgnoreCase(provider)) {
-            defaultList = VoxScribeAiClient.CLAUDE_MODELS;
-        } else if (VoxScribeAiClient.PROVIDER_GROQ.equalsIgnoreCase(provider)) {
-            defaultList = VoxScribeAiClient.GROQ_MODELS;
+        List<String> defaultList = VocalixAiClient.GEMINI_MODELS;
+        if (VocalixAiClient.PROVIDER_OPENAI.equalsIgnoreCase(provider)) {
+            defaultList = VocalixAiClient.OPENAI_MODELS;
+        } else if (VocalixAiClient.PROVIDER_CLAUDE.equalsIgnoreCase(provider)) {
+            defaultList = VocalixAiClient.CLAUDE_MODELS;
+        } else if (VocalixAiClient.PROVIDER_GROQ.equalsIgnoreCase(provider)) {
+            defaultList = VocalixAiClient.GROQ_MODELS;
         }
 
         final List<String> modelsToShow = new ArrayList<>(defaultList);
 
         if (!apiKey.isEmpty()) {
             Toast.makeText(this, "جاري جلب النماذج المدعومة من حسابك...", Toast.LENGTH_SHORT).show();
-            VoxScribeAiClient.fetchAvailableModels(provider, apiKey, (success, msg, liveModels) -> {
+            VocalixAiClient.fetchAvailableModels(provider, apiKey, (success, msg, liveModels) -> {
                 runOnUiThread(() -> {
                     if (success && liveModels != null && !liveModels.isEmpty()) {
                         modelsToShow.clear();
@@ -1343,7 +1343,7 @@ public class MainActivity extends Activity {
 
     private void displayModelListDialog(List<String> models, String currentModel) {
         List<String> options = new ArrayList<>();
-        options.add(VoxScribeAiClient.MODEL_AUTO);
+        options.add(VocalixAiClient.MODEL_AUTO);
         for (String m : models) {
             if (!options.contains(m)) options.add(m);
         }
@@ -1352,7 +1352,7 @@ public class MainActivity extends Activity {
         int selectedIndex = 0;
         for (int i = 0; i < options.size(); i++) {
             String opt = options.get(i);
-            if (VoxScribeAiClient.MODEL_AUTO.equals(opt)) {
+            if (VocalixAiClient.MODEL_AUTO.equals(opt)) {
                 displayNames[i] = getString(R.string.settings_model_auto);
             } else {
                 displayNames[i] = opt;
@@ -1377,19 +1377,19 @@ public class MainActivity extends Activity {
     }
 
     private void refreshSettingsUI() {
-        String curProvider = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
-        String curModel = prefs.getString(KEY_AI_MODEL, VoxScribeAiClient.MODEL_AUTO);
+        String curProvider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
+        String curModel = prefs.getString(KEY_AI_MODEL, VocalixAiClient.MODEL_AUTO);
 
         if (settingsTvCurrentProvider != null) {
-            if (VoxScribeAiClient.PROVIDER_OPENAI.equalsIgnoreCase(curProvider)) {
+            if (VocalixAiClient.PROVIDER_OPENAI.equalsIgnoreCase(curProvider)) {
                 settingsTvCurrentProvider.setText("OpenAI (Whisper & ChatGPT)");
                 if (settingsTvProviderDesc != null) settingsTvProviderDesc.setText("دقة عالية في التفريغ وتلخيص عبر ChatGPT");
                 if (settingsEtKey != null) settingsEtKey.setHint("sk-proj-...");
-            } else if (VoxScribeAiClient.PROVIDER_CLAUDE.equalsIgnoreCase(curProvider)) {
+            } else if (VocalixAiClient.PROVIDER_CLAUDE.equalsIgnoreCase(curProvider)) {
                 settingsTvCurrentProvider.setText("Anthropic Claude");
                 if (settingsTvProviderDesc != null) settingsTvProviderDesc.setText("أقوى نماذج التفكير والتلخيص الذكي للأحاديث");
                 if (settingsEtKey != null) settingsEtKey.setHint("sk-ant-api...");
-            } else if (VoxScribeAiClient.PROVIDER_GROQ.equalsIgnoreCase(curProvider)) {
+            } else if (VocalixAiClient.PROVIDER_GROQ.equalsIgnoreCase(curProvider)) {
                 settingsTvCurrentProvider.setText("Groq Cloud (Whisper)");
                 if (settingsTvProviderDesc != null) settingsTvProviderDesc.setText("سرعة تفريغ خارقة وفورية عبر خوادم LPU");
                 if (settingsEtKey != null) settingsEtKey.setHint("gsk_...");
@@ -1401,7 +1401,7 @@ public class MainActivity extends Activity {
         }
 
         if (settingsTvCurrentModel != null) {
-            if (VoxScribeAiClient.MODEL_AUTO.equalsIgnoreCase(curModel)) {
+            if (VocalixAiClient.MODEL_AUTO.equalsIgnoreCase(curModel)) {
                 settingsTvCurrentModel.setText(R.string.settings_model_auto_short);
             } else {
                 settingsTvCurrentModel.setText(curModel);
@@ -1647,11 +1647,11 @@ public class MainActivity extends Activity {
 
         NotificationHelper.showTranscribingNotification(this);
 
-        String provider = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
+        String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
         String model = prefs.getString(KEY_AI_MODEL, "gemini-2.0-flash");
         boolean splitSpeakers = prefs.getBoolean("split_speakers", true);
 
-        VoxScribeAiClient.transcribe(currentRawAudioFile, currentMimeType, provider, model, apiKey, splitSpeakers, new VoxScribeAiClient.TranscribeCallback() {
+        VocalixAiClient.transcribe(currentRawAudioFile, currentMimeType, provider, model, apiKey, splitSpeakers, new VocalixAiClient.TranscribeCallback() {
             @Override
             public void onPartialChunk(String partialText) {
                 runOnUiThread(() -> {
@@ -1714,10 +1714,10 @@ public class MainActivity extends Activity {
             tvSummaryContent.setText(R.string.generating_summary);
         }
 
-        String provider = prefs.getString(KEY_AI_PROVIDER, VoxScribeAiClient.PROVIDER_GEMINI);
+        String provider = prefs.getString(KEY_AI_PROVIDER, VocalixAiClient.PROVIDER_GEMINI);
         String model = prefs.getString(KEY_AI_MODEL, "gemini-2.0-flash");
 
-        VoxScribeAiClient.summarizeText(text, provider, model, apiKey, new VoxScribeAiClient.SummarizeCallback() {
+        VocalixAiClient.summarizeText(text, provider, model, apiKey, new VocalixAiClient.SummarizeCallback() {
             @Override
             public void onSuccess(String summary) {
                 recordUsageHit();

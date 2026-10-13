@@ -346,7 +346,7 @@
                             android:textColor="@color/text_secondary" />
                     </LinearLayout>
 
-                    <com.voxscribe.app.M3Switch
+                    <com.vocalix.app.M3Switch
                         android:id="@+id/cbDiarizationMain"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -389,7 +389,7 @@
                             android:textColor="@color/text_primary" />
                     </LinearLayout>
 
-                    <com.voxscribe.app.M3WavyProgressBar
+                    <com.vocalix.app.M3WavyProgressBar
                         android:id="@+id/progressBar"
                         android:layout_width="match_parent"
                         android:layout_height="18dp"
@@ -551,7 +551,7 @@
                     </LinearLayout>
 
                     <!-- Summary Loading Indicator -->
-                    <com.voxscribe.app.M3WavyProgressBar
+                    <com.vocalix.app.M3WavyProgressBar
                         android:id="@+id/pbSummary"
                         android:layout_width="match_parent"
                         android:layout_height="16dp"
@@ -1409,7 +1409,7 @@
                                 android:textColor="@color/text_secondary" />
                         </LinearLayout>
 
-                        <com.voxscribe.app.M3Switch
+                        <com.vocalix.app.M3Switch
                             android:id="@+id/settings_cb_diarization"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -1459,7 +1459,7 @@
                                 android:textColor="@color/text_secondary" />
                         </LinearLayout>
 
-                        <com.voxscribe.app.M3Switch
+                        <com.vocalix.app.M3Switch
                             android:id="@+id/settings_cb_history"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -1509,7 +1509,7 @@
                                 android:textColor="@color/text_secondary" />
                         </LinearLayout>
 
-                        <com.voxscribe.app.M3Switch
+                        <com.vocalix.app.M3Switch
                             android:id="@+id/settings_cb_biometric"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -1559,7 +1559,7 @@
                                 android:textColor="@color/text_secondary" />
                         </LinearLayout>
 
-                        <com.voxscribe.app.M3Switch
+                        <com.vocalix.app.M3Switch
                             android:id="@+id/settings_cb_bg_notif"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

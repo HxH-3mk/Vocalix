@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.util.Base64;
 import android.util.Log;
@@ -23,15 +23,15 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * VoxScribe AI Client
+ * Vocalix AI Client
  * Universal, production-ready audio transcription and summarization engine supporting:
  * 1. Google Gemini (multimodal native audio)
  * 2. OpenAI (Audio Transcriptions via Whisper / Audio models)
  * 3. Anthropic Claude (via Claude reasoning engine for text / transcript summarization)
  * 4. Groq (Ultra-fast Whisper-Large models)
  */
-public class VoxScribeAiClient {
-    private static final String TAG = "VoxScribeAiClient";
+public class VocalixAiClient {
+    private static final String TAG = "VocalixAiClient";
 
     public static final String PROVIDER_GEMINI = "gemini";
     public static final String PROVIDER_OPENAI = "openai";
@@ -343,7 +343,7 @@ public class VoxScribeAiClient {
             String userPromptText;
 
             if (splitSpeakers) {
-                systemInstructionText = "You are VoxScribe AI, an elite multilingual speech transcription system with expert native Speaker Diarization capability.\n\n" +
+                systemInstructionText = "You are Vocalix AI, an elite multilingual speech transcription system with expert native Speaker Diarization capability.\n\n" +
                         "Core Mission:\n" +
                         "Transcribe the spoken audio with maximum fidelity into the EXACT native language spoken in the recording.\n" +
                         "Apply accurate punctuation and natural sentence boundaries. Remove hesitation stutters.\n\n" +
@@ -357,7 +357,7 @@ public class VoxScribeAiClient {
                         "2. Output ONLY clean transcribed text without greetings or intro.";
                 userPromptText = "Transcribe this audio recording into its spoken language. If multiple speakers exist, label each turn on a new line using the speaker label in THAT SAME spoken language (e.g., 'المتحدث 1:' for Arabic, 'Speaker 1:' for English). Output text only.";
             } else {
-                systemInstructionText = "You are VoxScribe AI, an elite multilingual speech transcription system. Transcribe the spoken audio with maximum fidelity into its native spoken language with accurate punctuation. Output the clean transcribed text only without commentary.";
+                systemInstructionText = "You are Vocalix AI, an elite multilingual speech transcription system. Transcribe the spoken audio with maximum fidelity into its native spoken language with accurate punctuation. Output the clean transcribed text only without commentary.";
                 userPromptText = "Transcribe this audio recording into clean text with punctuation in its spoken language. Output text only.";
             }
 
@@ -519,7 +519,7 @@ public class VoxScribeAiClient {
     private static void transcribeWithOpenAi(File audioFile, String endpointUrl, String modelName, String apiKey, boolean splitSpeakers, TranscribeCallback callback) {
         HttpURLConnection conn = null;
         try {
-            String boundary = "===VoxScribe" + System.currentTimeMillis() + "===";
+            String boundary = "===Vocalix" + System.currentTimeMillis() + "===";
             URL url = new URL(endpointUrl);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");

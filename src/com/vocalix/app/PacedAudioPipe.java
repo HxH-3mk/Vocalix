@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.os.ParcelFileDescriptor;
 import android.util.Log;

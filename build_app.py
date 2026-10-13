@@ -72,7 +72,7 @@ if not os.path.exists(KEYSTORE):
         "-validity", "10000",
         "-storepass", KS_PASS,
         "-keypass", KEY_PASS,
-        "-dname", "CN=VoxScribe, OU=Mobile, O=VoxScribe, L=Global, S=Global, C=US"
+        "-dname", "CN=Vocalix, OU=Mobile, O=Vocalix, L=Global, S=Global, C=US"
     ])
 
 for d in ["compiled_res", "gen", "bin", "dex_out"]:
@@ -153,14 +153,14 @@ subprocess.check_call([
     "--v1-signing-enabled", "true",
     "--v2-signing-enabled", "true",
     "--v3-signing-enabled", "true",
-    "--out", "VoxScribe.apk",
+    "--out", "Vocalix.apk",
     "aligned.apk"
 ])
 
 if os.path.isdir(".."):
     try:
-        shutil.copy("VoxScribe.apk", os.path.join("..", "VoxScribe.apk"))
+        shutil.copy("Vocalix.apk", os.path.join("..", "Vocalix.apk"))
     except Exception:
         pass
 
-print("SUCCESS: VoxScribe.apk built successfully!")
+print("SUCCESS: Vocalix.apk built successfully!")

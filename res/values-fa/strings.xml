@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">دستیار هوشمند تبدیل صوت به متن برای تمامی زبان‌های جهان</string>
     <string name="btn_pick_file">📁 انتخاب فایل صوتی</string>
     <string name="btn_copy">کپی</string>
@@ -21,7 +21,7 @@
     <string name="status_label">وضعیت:</string>
     <string name="status_idle">آماده • یک فایل صوتی از واتساپ یا تلگرام ارسال کنید یا فایلی انتخاب نمایید</string>
     <string name="status_decoding">در حال خواندن و رمزگشایی فایل صوتی...</string>
-    <string name="status_transcribing">در حال تبدیل هوشمند با Google VoxScribe...</string>
+    <string name="status_transcribing">در حال تبدیل هوشمند با Google Vocalix...</string>
     <string name="status_success">تبدیل با موفقیت انجام شد ✓</string>
     <string name="status_error">خطا: </string>
 
@@ -43,7 +43,7 @@
     <string name="lang_system_default">خودکار (پیش‌فرض سیستم)</string>
     <string name="btn_save">ذخیره</string>
     <string name="btn_cancel">لغو</string>
-    <string name="settings_title">تنظیمات VoxScribe AI</string>
+    <string name="settings_title">تنظیمات Vocalix AI</string>
     <string name="settings_subtitle">پیکربندی کلید، زبان و گزینه‌ها</string>
     <string name="settings_key_title">🔑 کلید Google AI (Gemini)</string>
     <string name="settings_key_desc">۱۵۰۰ درخواست رایگان روزانه</string>
@@ -126,7 +126,7 @@
     <string name="settings_backup_title">پشتیبان‌گیری از تاریخچه</string>
     <string name="settings_biometric_desc">نیاز به اثر انگشت یا قفل صفحه برای دسترسی به رونوشت‌ها</string>
     <string name="settings_biometric_title">قفل تاریخچه با امنیت و اثر انگشت</string>
-    <string name="settings_info">موتور VoxScribe از مدل‌های هوشمند گوگل (Gemini Flash) استفاده می‌کند.\n• کلید رایگان خود را از اینجا دریافت کنید:\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">موتور Vocalix از مدل‌های هوشمند گوگل (Gemini Flash) استفاده می‌کند.\n• کلید رایگان خود را از اینجا دریافت کنید:\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">وارد کردن و ادغام رونوشت‌ها از یک فایل پشتیبان</string>
     <string name="settings_restore_title">بازیابی تاریخچه</string>
     <string name="biometric_disable_prompt_title">تأیید هویت برای غیرفعال کردن قفل</string>
@@ -139,7 +139,7 @@
     <string name="settings_bg_notif_desc">اجرای تبدیل در پس‌زمینه و نمایش اعلان ثابت فقط در حین پردازش</string>
     <string name="notif_channel_name">وضعیت رونوشت</string>
     <string name="notif_channel_desc">اعلان‌های پیشرفت و تکمیل رونوشت در پس‌زمینه</string>
-    <string name="notif_transcribing_title">VoxScribe - در حال تبدیل صوت</string>
+    <string name="notif_transcribing_title">Vocalix - در حال تبدیل صوت</string>
     <string name="notif_transcribing_desc">در حال تجزیه و تحلیل و رونویسی صوت در پس‌زمینه...</string>
     <string name="notif_complete_title">تبدیل صوت با موفقیت انجام شد ✓</string>
     <string name="notif_complete_desc">برای باز کردن برنامه و مشاهده متن و خلاصه ضربه بزنید</string>

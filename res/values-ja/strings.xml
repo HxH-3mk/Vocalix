@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">世界中の全言語に対応したスマート音声文字起こしAI</string>
     <string name="btn_pick_file">📁 音声を選択</string>
     <string name="btn_copy">コピー</string>
@@ -21,7 +21,7 @@
     <string name="status_label">状態：</string>
     <string name="status_idle">待機中 • LINE/WhatsAppから音声を共有するか、ファイルを選択してください</string>
     <string name="status_decoding">音声ファイルを読み込み・解析中...</string>
-    <string name="status_transcribing">Google VoxScribe で文字起こし中...</string>
+    <string name="status_transcribing">Google Vocalix で文字起こし中...</string>
     <string name="status_success">文字起こしが正常に完了しました ✓</string>
     <string name="status_error">エラー：</string>
 
@@ -43,7 +43,7 @@
     <string name="lang_system_default">自動（システムのデフォルト）</string>
     <string name="btn_save">保存</string>
     <string name="btn_cancel">キャンセル</string>
-    <string name="settings_title">VoxScribe AI 設定</string>
+    <string name="settings_title">Vocalix AI 設定</string>
     <string name="settings_subtitle">APIキー、言語、オプションの設定</string>
     <string name="settings_key_title">🔑 Google AI キー (Gemini)</string>
     <string name="settings_key_desc">毎日1,500件の無料リクエスト</string>
@@ -126,7 +126,7 @@
     <string name="settings_backup_title">履歴のバックアップ</string>
     <string name="settings_biometric_desc">文字起こしへのアクセスに指紋または画面ロックを要求</string>
     <string name="settings_biometric_title">生体認証で履歴をロック</string>
-    <string name="settings_info">VoxScribeはGoogleのスマートモデル（Gemini Flash）を採用しています。\n• 無料のAPIキーの取得先：\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">VocalixはGoogleのスマートモデル（Gemini Flash）を採用しています。\n• 無料のAPIキーの取得先：\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">バックアップファイルから文字起こしをインポートして統合</string>
     <string name="settings_restore_title">履歴の復元</string>
     <string name="biometric_disable_prompt_title">ロック解除を無効化するための本人確認</string>
@@ -139,11 +139,11 @@
     <string name="settings_bg_notif_desc">バックグラウンドで文字起こしを継続し、処理中のみ通知を表示します</string>
     <string name="notif_channel_name">文字起こしの進行状況</string>
     <string name="notif_channel_desc">バックグラウンドでの文字起こしの進捗と完了の通知</string>
-    <string name="notif_transcribing_title">VoxScribe - 音声を文字起こし中</string>
+    <string name="notif_transcribing_title">Vocalix - 音声を文字起こし中</string>
     <string name="notif_transcribing_desc">バックグラウンドで音声を処理して文字起こししています...</string>
     <string name="notif_complete_title">文字起こしが正常に完了しました ✓</string>
     <string name="notif_complete_desc">タップしてアプリを開き、文字起こしと要約を表示します</string>
     <string name="bg_notif_perm_required">バックグラウンド状況を表示するには通知の許可が必要です</string>
     <string name="settings_coffee_title">☕ 開発者を支援 (Buy Me a Coffee)</string>
-    <string name="settings_coffee_desc">VoxScribeの無料提供と継続的な改善をサポート</string>
+    <string name="settings_coffee_desc">Vocalixの無料提供と継続的な改善をサポート</string>
 </resources>

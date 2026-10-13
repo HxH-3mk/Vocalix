@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -15,7 +15,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 /**
- * Pure Black AMOLED Engine for VoxScribe.
+ * Pure Black AMOLED Engine for Vocalix.
  * Ensures true 100% #000000 pixel-off black across all surfaces, cards,
  * navigation bars, input areas, headers, and dialogs.
  */
@@ -27,7 +27,7 @@ public class AmoledThemeHelper {
 
     public static boolean isAmoled(Context context) {
         if (context == null) return false;
-        SharedPreferences sp = context.getSharedPreferences("voxscribe_settings", Context.MODE_PRIVATE);
+        SharedPreferences sp = context.getSharedPreferences("vocalix_settings", Context.MODE_PRIVATE);
         return MainActivity.THEME_AMOLED.equals(sp.getString(MainActivity.KEY_APP_THEME, MainActivity.THEME_SYSTEM));
     }
 

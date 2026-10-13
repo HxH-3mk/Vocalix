@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎙️ VoxScribe AI
+# 🎙️ Vocalix AI
 ### Next-Gen Multilingual Audio Transcription & Intelligence Engine for Android
 **Smart Speaker Diarization • Real-Time SSE Streaming • Multi-Model Auto-Failover • Biometric Privacy**
 
@@ -33,9 +33,9 @@
 
 ## 🇬🇧 Overview
 
-**VoxScribe AI** is an ultra-fast, privacy-first native Android audio transcription and voice intelligence application. Powered by cutting-edge multimodal AI models (Google Gemini, OpenAI Whisper, Anthropic Claude, and Groq Cloud), VoxScribe transforms voice recordings, lectures, meetings, and WhatsApp/Telegram audio notes into crystal-clear formatted text in real time.
+**Vocalix AI** is an ultra-fast, privacy-first native Android audio transcription and voice intelligence application. Powered by cutting-edge multimodal AI models (Google Gemini, OpenAI Whisper, Anthropic Claude, and Groq Cloud), Vocalix transforms voice recordings, lectures, meetings, and WhatsApp/Telegram audio notes into crystal-clear formatted text in real time.
 
-Designed with a modern **Material Design 3** philosophy and **AMOLED True-Black** theme, VoxScribe provides a distraction-free experience with zero bloat and complete user control over API keys and local data.
+Designed with a modern **Material Design 3** philosophy and **AMOLED True-Black** theme, Vocalix provides a distraction-free experience with zero bloat and complete user control over API keys and local data.
 
 ### ✨ Key Features
 
@@ -46,7 +46,7 @@ Designed with a modern **Material Design 3** philosophy and **AMOLED True-Black*
   Accurately detects and separates multiple speakers on individual conversational lines formatted in the speaker's native language (e.g., *Speaker 1 / Speaker 2*, *المتحدث 1 / المتحدث 2*).
 
 - **🔄 Smart Multi-Model Auto-Failover:**
-  Never get blocked by rate limits or 429 quota exhaustion. If a Gemini model hits its free-tier daily cap, VoxScribe automatically and seamlessly cascades to the next best available model in the quota pool (`gemini-3.5-flash-lite` -> `gemini-3.1-flash-lite` -> `gemini-2.0-flash` etc.) without stopping your transcription.
+  Never get blocked by rate limits or 429 quota exhaustion. If a Gemini model hits its free-tier daily cap, Vocalix automatically and seamlessly cascades to the next best available model in the quota pool (`gemini-3.5-flash-lite` -> `gemini-3.1-flash-lite` -> `gemini-2.0-flash` etc.) without stopping your transcription.
 
 - **📲 Universal Audio Ingestion & Instant Share Sheet:**
   - One-tap share directly from **WhatsApp**, **Telegram**, voice recorder apps, and file managers.
@@ -73,7 +73,7 @@ Designed with a modern **Material Design 3** philosophy and **AMOLED True-Black*
 
 ## 🇸🇦 نظرة عامة عن التطبيق
 
-**VoxScribe AI** هو تطبيق أندرويد متطور واحترافي لتحويل الصوت إلى نص وتلخيص الملاحظات الصوتية والمحادثات بالاعتماد على أحدث نماذج الذكاء الاصطناعي العالمية (Google Gemini و OpenAI Whisper و Claude و Groq).
+**Vocalix AI** هو تطبيق أندرويد متطور واحترافي لتحويل الصوت إلى نص وتلخيص الملاحظات الصوتية والمحادثات بالاعتماد على أحدث نماذج الذكاء الاصطناعي العالمية (Google Gemini و OpenAI Whisper و Claude و Groq).
 
 تم تصميم التطبيق بواجهة **Material You (Material 3)** عصرية تدعم الوضع الداكن الحقيقي **(AMOLED Pitch Black)** بالكامل، ومصمم ليكون فائق السرعة، خفيف الحجم، ويحمي خصوصية المستخدم تماماً.
 
@@ -135,30 +135,30 @@ The project includes a lightweight, cross-platform build script that compiles re
 
 ```bash
 # Clone the repository
-git clone https://github.com/HxH-3mk/VoxScribe.git
-cd VoxScribe
+git clone https://github.com/HxH-3mk/Vocalix.git
+cd Vocalix
 
-# Build and generate VoxScribe.apk
+# Build and generate Vocalix.apk
 python build_app.py
 ```
 
-The resulting signed APK will be output as `VoxScribe.apk`.
+The resulting signed APK will be output as `Vocalix.apk`.
 
 ---
 
 ## 🔑 Getting an API Key
 
-VoxScribe utilizes official developer APIs. You can obtain a **100% Free** Google Gemini API key:
+Vocalix utilizes official developer APIs. You can obtain a **100% Free** Google Gemini API key:
 1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Sign in with your Google Account and click **Create API Key**.
-3. Open **VoxScribe Settings**, paste your key, and tap **Test Key & Verify Models**.
+3. Open **Vocalix Settings**, paste your key, and tap **Test Key & Verify Models**.
 4. Enjoy up to **1,500 free daily requests** automatically refreshed every 24 hours.
 
 ---
 
 ## 💖 Support the Project / ادعم المشروع
 
-If you find **VoxScribe** helpful and appreciate its continuous open-source improvements, consider buying me a coffee to support future updates and new features! ☕
+If you find **Vocalix** helpful and appreciate its continuous open-source improvements, consider buying me a coffee to support future updates and new features! ☕
 
 إذا أعجبك التطبيق وتود المساهمة في استمرار تطويره وإضافة المزيد من النماذج والميزات الذكية بشكل مجاني دائماً، يمكنك دعم المطور عبر الرابط:
 

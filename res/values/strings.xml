@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
     <string name="app_subtitle">المساعد الذكي لتفريغ الصوتيات والملاحظات الصوتية لكافة لغات العالم</string>
-    <string name="share_target_label">تفريغ الصوت (VoxScribe)</string>
+    <string name="share_target_label">تفريغ الصوت (Vocalix)</string>
     <string name="btn_pick_file">📁 اختيار ملف صوتي</string>
     <string name="btn_copy">نسخ</string>
     <string name="btn_share">مشاركة</string>
@@ -21,11 +21,11 @@
     <string name="status_label">الحالة:</string>
     <string name="status_idle">جاهز للاستقبال • شارك مقطعاً من واتساب أو تليجرام أو اختر ملفاً</string>
     <string name="status_decoding">جاري فحص وقراءة المقطع الصوتي...</string>
-    <string name="status_transcribing">جاري التفريغ الذكي بواسطة VoxScribe AI...</string>
+    <string name="status_transcribing">جاري التفريغ الذكي بواسطة Vocalix AI...</string>
     <string name="status_success">اكتمل التفريغ بنجاح ✓</string>
     <string name="status_error">خطأ: </string>
 
-    <string name="share_tip">💡 أو حدد أي فويس في واتساب أو تليجرام واضغط مشاركة ← تفريغ الصوت (VoxScribe)</string>
+    <string name="share_tip">💡 أو حدد أي فويس في واتساب أو تليجرام واضغط مشاركة ← تفريغ الصوت (Vocalix)</string>
     <string name="result_header">النص المفرغ</string>
     <string name="hint_result">سيظهر النص المستخرج هنا مباشرة باللغة المنطوقة مع التنسيق...</string>
     <string name="summary_header">ملخص المحادثة</string>
@@ -38,8 +38,9 @@
     <string name="no_text_to_share">لا يوجد نص لمشاركته</string>
     <string name="words_count">• %1$d كلمة (%2$d حرف)</string>
     <string name="file_size_info">حجم الملف: %1$d KB</string>
-    <string name="settings_title">إعدادات VoxScribe AI</string>
-    <string name="settings_info">يعمل محرك VoxScribe بنماذج قوقل الذكية (Gemini Flash).\n• احصل على مفتاحك مجاناً وبدون بطاقة من:\naistudio.google.com/app/apikey</string>
+    <string name="file_duration_info">المدة: %1$02d:%2$02d • 16kHz Mono</string>
+    <string name="settings_title">إعدادات Vocalix AI</string>
+    <string name="settings_info">يعمل محرك Vocalix بنماذج قوقل الذكية (Gemini Flash).\n• احصل على مفتاحك مجاناً وبدون بطاقة من:\naistudio.google.com/app/apikey</string>
     <string name="language_selector_label">🌐 لغة الواجهة:</string>
     <string name="lang_system_default">تلقائي (حسب لغة النظام)</string>
     <string name="btn_save">حفظ</string>
@@ -142,7 +143,7 @@
     <string name="settings_bg_notif_desc">إبقاء التحويل قيد التشغيل في الخلفية وإظهار إشعار ثابت أثناء المعالجة فقط</string>
     <string name="notif_channel_name">حالة التفريغ بالذكاء الاصطناعي</string>
     <string name="notif_channel_desc">إشعارات تقدم واكتمال التفريغ في الخلفية</string>
-    <string name="notif_transcribing_title">VoxScribe - جاري التفريغ الذكي</string>
+    <string name="notif_transcribing_title">Vocalix - جاري التفريغ الذكي</string>
     <string name="notif_transcribing_desc">جاري تحليل الصوت وتفريغه في الخلفية...</string>
     <string name="notif_complete_title">اكتمل التفريغ بنجاح ✓</string>
     <string name="notif_complete_desc">انقر لفتح التطبيق وعرض النص والملخص</string>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">전 세계 모든 언어를 지원하는 스마트 음성 변환 어시스턴트</string>
     <string name="btn_pick_file">📁 오디오 선택</string>
     <string name="btn_copy">복사</string>
@@ -21,7 +21,7 @@
     <string name="status_label">상태:</string>
     <string name="status_idle">준비 완료 • 카카오톡/WhatsApp에서 음성을 공유하거나 파일을 선택하세요</string>
     <string name="status_decoding">오디오 파일 분석 및 디코딩 중...</string>
-    <string name="status_transcribing">Google VoxScribe로 텍스트 변환 중...</string>
+    <string name="status_transcribing">Google Vocalix로 텍스트 변환 중...</string>
     <string name="status_success">텍스트 변환 완료 ✓</string>
     <string name="status_error">오류: </string>
 
@@ -43,7 +43,7 @@
     <string name="lang_system_default">자동 (시스템 기본값)</string>
     <string name="btn_save">저장</string>
     <string name="btn_cancel">취소</string>
-    <string name="settings_title">VoxScribe AI 설정</string>
+    <string name="settings_title">Vocalix AI 설정</string>
     <string name="settings_subtitle">API 키, 언어 및 옵션 설정</string>
     <string name="settings_key_title">🔑 Google AI 키 (Gemini)</string>
     <string name="settings_key_desc">매일 1,500회 무료 요청 제공</string>
@@ -126,7 +126,7 @@
     <string name="settings_backup_title">기록 백업</string>
     <string name="settings_biometric_desc">기록에 접근하려면 지문 또는 화면 잠금 필요</string>
     <string name="settings_biometric_title">생체 인식으로 기록 잠금</string>
-    <string name="settings_info">VoxScribe는 Google의 스마트 모델(Gemini Flash)로 구동됩니다.\n• 무료 API 키 발급처:\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">Vocalix는 Google의 스마트 모델(Gemini Flash)로 구동됩니다.\n• 무료 API 키 발급처:\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">백업 파일에서 기록 가져오기 및 병합</string>
     <string name="settings_restore_title">기록 복원</string>
     <string name="biometric_disable_prompt_title">잠금 해제를 비활성화하기 위한 본인 확인</string>
@@ -139,11 +139,11 @@
     <string name="settings_bg_notif_desc">백그라운드에서 변환을 계속 실행하고 처리 중에만 고정 알림을 표시합니다</string>
     <string name="notif_channel_name">변환 상태</string>
     <string name="notif_channel_desc">백그라운드 변환 진행 상황 및 완료 알림</string>
-    <string name="notif_transcribing_title">VoxScribe - 오디오 변환 중</string>
+    <string name="notif_transcribing_title">Vocalix - 오디오 변환 중</string>
     <string name="notif_transcribing_desc">백그라운드에서 오디오 처리 및 변환 중...</string>
     <string name="notif_complete_title">오디오 변환이 성공적으로 완료되었습니다 ✓</string>
     <string name="notif_complete_desc">앱을 열어 텍스트와 요약을 보려면 탭하세요</string>
     <string name="bg_notif_perm_required">백그라운드 상태 표시를 위해 알림 권한이 필요합니다</string>
     <string name="settings_coffee_title">☕ 개발자 후원하기 (Buy Me a Coffee)</string>
-    <string name="settings_coffee_desc">VoxScribe를 무료로 빠르고 지속적으로 유지할 수 있도록 후원하기</string>
+    <string name="settings_coffee_desc">Vocalix를 무료로 빠르고 지속적으로 유지할 수 있도록 후원하기</string>
 </resources>

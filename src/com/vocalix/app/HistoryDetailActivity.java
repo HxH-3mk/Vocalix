@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.app.Activity;
 import android.content.ClipData;
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HistoryDetailActivity extends Activity {
-    private static final String PREFS_NAME = "voxscribe_settings";
+    private static final String PREFS_NAME = "vocalix_settings";
     private static final String KEY_APP_LANGUAGE = "app_language";
 
     private String entryId;

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
     <string name="app_subtitle">Smart voice-to-text transcriber for all global languages</string>
-    <string name="share_target_label">Transcribe Audio (VoxScribe)</string>
+    <string name="share_target_label">Transcribe Audio (Vocalix)</string>
     <string name="btn_pick_file">📁 Pick Audio File</string>
     <string name="btn_copy">Copy</string>
     <string name="btn_share">Share</string>
@@ -21,11 +21,11 @@
     <string name="status_label">Status:</string>
     <string name="status_idle">Ready • Share a voice note from WhatsApp, Telegram, or pick a file</string>
     <string name="status_decoding">Reading and decoding audio file...</string>
-    <string name="status_transcribing">Transcribing with VoxScribe AI...</string>
+    <string name="status_transcribing">Transcribing with Vocalix AI...</string>
     <string name="status_success">Transcription completed ✓</string>
     <string name="status_error">Error: </string>
 
-    <string name="share_tip">💡 Or select any voice note in WhatsApp/Telegram &amp; tap Share → Transcribe Audio (VoxScribe)</string>
+    <string name="share_tip">💡 Or select any voice note in WhatsApp/Telegram &amp; tap Share → Transcribe Audio (Vocalix)</string>
     <string name="result_header">Transcribed Text</string>
     <string name="hint_result">Transcribed text will appear here in the spoken language with punctuation...</string>
     <string name="summary_header">Conversation Summary</string>
@@ -38,8 +38,9 @@
     <string name="no_text_to_share">No text to share</string>
     <string name="words_count">• %1$d words (%2$d chars)</string>
     <string name="file_size_info">File size: %1$d KB</string>
-    <string name="settings_title">VoxScribe AI Settings</string>
-    <string name="settings_info">VoxScribe is powered by Gemini Flash models.\n• Get your free API key at:\naistudio.google.com/app/apikey</string>
+    <string name="file_duration_info">Duration: %1$02d:%2$02d • 16kHz Mono</string>
+    <string name="settings_title">Vocalix AI Settings</string>
+    <string name="settings_info">Vocalix is powered by Gemini Flash models.\n• Get your free API key at:\naistudio.google.com/app/apikey</string>
     <string name="language_selector_label">🌐 App Language:</string>
     <string name="lang_system_default">Auto (System Default)</string>
     <string name="btn_save">Save</string>
@@ -144,11 +145,11 @@ Are you sure you want to continue?</string>
     <string name="settings_bg_notif_desc">Keep transcription running in background and show a persistent notification during processing only</string>
     <string name="notif_channel_name">Transcription Status</string>
     <string name="notif_channel_desc">Notifications for transcription progress and completion in the background</string>
-    <string name="notif_transcribing_title">VoxScribe - Transcribing Audio</string>
+    <string name="notif_transcribing_title">Vocalix - Transcribing Audio</string>
     <string name="notif_transcribing_desc">Processing audio and transcribing in background...</string>
     <string name="notif_complete_title">Transcription Completed Successfully ✓</string>
     <string name="notif_complete_desc">Tap to open the app and view transcript and summary</string>
     <string name="bg_notif_perm_required">Notification permission is required for background status</string>
     <string name="settings_coffee_title">☕ Support Developer (Buy Me a Coffee)</string>
-    <string name="settings_coffee_desc">Help keep VoxScribe free, fast, and continuously updated</string>
+    <string name="settings_coffee_desc">Help keep Vocalix free, fast, and continuously updated</string>
 </resources>

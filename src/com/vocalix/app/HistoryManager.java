@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class HistoryManager {
-    private static final String PREFS_NAME = "voxscribe_history_prefs";
+    private static final String PREFS_NAME = "vocalix_history_prefs";
     private static final String KEY_HISTORY_ENABLED = "history_enabled";
     private static final String KEY_HISTORY_ITEMS = "history_items_json";
 

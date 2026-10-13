@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -16,7 +16,7 @@ import java.io.FileNotFoundException;
  * Lightweight, zero-dependency ContentProvider for sharing PDF, TXT, SRT, and Backup files.
  */
 public class AppFileProvider extends ContentProvider {
-    public static final String AUTHORITY = "com.voxscribe.app.fileprovider";
+    public static final String AUTHORITY = "com.vocalix.app.fileprovider";
 
     public static Uri getUriForFile(Context context, File file) {
         return Uri.parse("content://" + AUTHORITY + "/" + file.getName());

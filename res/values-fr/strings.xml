@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">Transcription intelligente de notes vocales dans toutes les langues du monde</string>
     <string name="btn_pick_file">📁 Choisir un audio</string>
     <string name="btn_copy">Copier</string>
@@ -21,7 +21,7 @@
     <string name="status_label">État :</string>
     <string name="status_idle">Prêt • Partagez un audio depuis WhatsApp, Telegram ou choisissez un fichier</string>
     <string name="status_decoding">Lecture et décodage du fichier audio...</string>
-    <string name="status_transcribing">Transcription avec Google VoxScribe...</string>
+    <string name="status_transcribing">Transcription avec Google Vocalix...</string>
     <string name="status_success">Transcription terminée ✓</string>
     <string name="status_error">Erreur : </string>
 
@@ -43,7 +43,7 @@
     <string name="lang_system_default">Automatique (Par défaut du système)</string>
     <string name="btn_save">Enregistrer</string>
     <string name="btn_cancel">Annuler</string>
-    <string name="settings_title">Paramètres de VoxScribe AI</string>
+    <string name="settings_title">Paramètres de Vocalix AI</string>
     <string name="settings_subtitle">Configurer la clé API, la langue et les options</string>
     <string name="settings_key_title">🔑 Clé Google AI (Gemini)</string>
     <string name="settings_key_desc">1 500 requêtes gratuites par jour</string>
@@ -126,7 +126,7 @@
     <string name="settings_backup_title">Sauvegarder l\'historique</string>
     <string name="settings_biometric_desc">Exiger l\'empreinte ou le verrouillage de l\'écran pour accéder aux transcriptions</string>
     <string name="settings_biometric_title">Verrouiller l\'historique avec la biométrie</string>
-    <string name="settings_info">VoxScribe utilise les modèles intelligents de Google (Gemini Flash).\n• Obtenez votre clé API gratuite sur :\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">Vocalix utilise les modèles intelligents de Google (Gemini Flash).\n• Obtenez votre clé API gratuite sur :\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">Importer et fusionner les transcriptions d\'un fichier de sauvegarde</string>
     <string name="settings_restore_title">Restaurer l\'historique</string>
     <string name="biometric_disable_prompt_title">Confirmer l\'identité pour désactiver le verrou</string>
@@ -139,11 +139,11 @@
     <string name="settings_bg_notif_desc">Poursuivre la transcription en arrière-plan et afficher une notification fixe pendant le traitement uniquement</string>
     <string name="notif_channel_name">État de la transcription</string>
     <string name="notif_channel_desc">Notifications de progression et d\'achèvement de la transcription</string>
-    <string name="notif_transcribing_title">VoxScribe - Transcription audio en cours</string>
+    <string name="notif_transcribing_title">Vocalix - Transcription audio en cours</string>
     <string name="notif_transcribing_desc">Traitement et transcription audio en arrière-plan...</string>
     <string name="notif_complete_title">Transcription terminée avec succès ✓</string>
     <string name="notif_complete_desc">Appuyez pour ouvrir l\'application et afficher la transcription</string>
     <string name="bg_notif_perm_required">Autorisation de notification requise pour le statut en arrière-plan</string>
     <string name="settings_coffee_title">☕ Soutenir le développeur (Buy Me a Coffee)</string>
-    <string name="settings_coffee_desc">Aidez à maintenir VoxScribe gratuit, rapide et mis à jour</string>
+    <string name="settings_coffee_desc">Aidez à maintenir Vocalix gratuit, rapide et mis à jour</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.voxscribe.app;
+package com.vocalix.app;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -35,7 +35,7 @@ public class HistoryBackupHelper {
             }
 
             JSONObject root = new JSONObject();
-            root.put("app", "VoxScribe");
+            root.put("app", "Vocalix");
             root.put("version", 2);
             root.put("exportTime", System.currentTimeMillis());
 
@@ -47,7 +47,7 @@ public class HistoryBackupHelper {
             root.put("items", arr);
 
             String dateTag = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(new Date());
-            File outFile = new File(context.getCacheDir(), "voxscribe_backup_" + dateTag + ".json");
+            File outFile = new File(context.getCacheDir(), "vocalix_backup_" + dateTag + ".json");
 
             try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)) {
                 writer.write(root.toString(2));

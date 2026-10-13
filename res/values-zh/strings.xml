@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxScribe</string>
-    <string name="app_title">VoxScribe</string>
-    <string name="share_target_label">VoxScribe Audio</string>
+    <string name="app_name">Vocalix</string>
+    <string name="app_title">Vocalix</string>
+    <string name="share_target_label">Vocalix Audio</string>
     <string name="app_subtitle">支持全球所有语言的智能语音转文字助手</string>
     <string name="btn_pick_file">📁 选择音频文件</string>
     <string name="btn_copy">复制</string>
@@ -21,11 +21,11 @@
     <string name="status_label">状态：</string>
     <string name="status_idle">就绪 • 从微信、WhatsApp、Telegram 分享语音或选择文件</string>
     <string name="status_decoding">正在读取并解码音频文件...</string>
-    <string name="status_transcribing">正在使用 Google VoxScribe 进行智能转录...</string>
+    <string name="status_transcribing">正在使用 Google Vocalix 进行智能转录...</string>
     <string name="status_success">转录成功完成 ✓</string>
     <string name="status_error">错误：</string>
 
-    <string name="share_tip">💡 提示：在聊天软件中选中语音并点击“分享 → 转录音频 (VoxScribe)”</string>
+    <string name="share_tip">💡 提示：在聊天软件中选中语音并点击“分享 → 转录音频 (Vocalix)”</string>
     <string name="result_header">转录文本</string>
     <string name="hint_result">转录文本将在此处以说话语言并附带标点符号显示...</string>
     <string name="summary_header">对话摘要</string>
@@ -43,7 +43,7 @@
     <string name="lang_system_default">自动（系统默认）</string>
     <string name="btn_save">保存</string>
     <string name="btn_cancel">取消</string>
-    <string name="settings_title">VoxScribe AI 设置</string>
+    <string name="settings_title">Vocalix AI 设置</string>
     <string name="settings_subtitle">配置 API 密钥、语言与选项</string>
     <string name="settings_key_title">🔑 Google AI 密钥 (Gemini)</string>
     <string name="settings_key_desc">每日免费 1,500 次转录与总结请求</string>
@@ -126,7 +126,7 @@
     <string name="settings_backup_title">备份历史记录</string>
     <string name="settings_biometric_desc">需要指纹或屏幕锁定才能访问记录</string>
     <string name="settings_biometric_title">使用生物识别锁定历史记录</string>
-    <string name="settings_info">VoxScribe 由 Google 智能模型 (Gemini Flash) 驱动。\n• 免费获取 API 密钥：\naistudio.google.com/app/apikey</string>
+    <string name="settings_info">Vocalix 由 Google 智能模型 (Gemini Flash) 驱动。\n• 免费获取 API 密钥：\naistudio.google.com/app/apikey</string>
     <string name="settings_restore_desc">从备份文件导入并合并记录</string>
     <string name="settings_restore_title">恢复历史记录</string>
     <string name="biometric_disable_prompt_title">确认身份以停用锁定</string>
@@ -139,11 +139,11 @@
     <string name="settings_bg_notif_desc">在后台保持转录运行，并仅在处理过程中显示常驻通知</string>
     <string name="notif_channel_name">转录状态</string>
     <string name="notif_channel_desc">后台转录进度与完成通知</string>
-    <string name="notif_transcribing_title">VoxScribe - 正在转录音频</string>
+    <string name="notif_transcribing_title">Vocalix - 正在转录音频</string>
     <string name="notif_transcribing_desc">正在后台处理并转录音频...</string>
     <string name="notif_complete_title">音频转录已成功完成 ✓</string>
     <string name="notif_complete_desc">点击打开应用查看文字与摘要</string>
     <string name="bg_notif_perm_required">需要通知权限以显示后台状态</string>
     <string name="settings_coffee_title">☕ 支持开发者 (Buy Me a Coffee)</string>
-    <string name="settings_coffee_desc">帮助 VoxScribe 保持免费、快速并持续更新</string>
+    <string name="settings_coffee_desc">帮助 Vocalix 保持免费、快速并持续更新</string>
 </resources>
