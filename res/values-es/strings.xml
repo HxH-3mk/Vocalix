@@ -115,7 +115,6 @@
     <string name="btn_transcribe_recording">🚀 Transcribir ahora</string>
     <string name="export_dialog_title">📤 Exportar transcripción</string>
     <string name="export_format_pdf">Documento PDF formateado (.pdf)</string>
-    <string name="export_format_srt">Archivo de subtítulos con marcas de tiempo (.srt)</string>
     <string name="export_format_txt">Archivo de texto plano (.txt)</string>
     <string name="record_perm_denied">Permiso de micrófono denegado</string>
     <string name="record_permission_required">Se requiere permiso de micrófono para grabar</string>

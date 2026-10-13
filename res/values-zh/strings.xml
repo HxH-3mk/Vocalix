@@ -108,7 +108,6 @@
     <string name="btn_transcribe_recording">🚀 立即转录</string>
     <string name="export_dialog_title">📤 导出文字记录</string>
     <string name="export_format_pdf">格式化 PDF 文档 (.pdf)</string>
-    <string name="export_format_srt">带时间戳的字幕文件 (.srt)</string>
     <string name="export_format_txt">纯文本文件 (.txt)</string>
     <string name="history_matches_in_script">文本中有 %1$d 处匹配</string>
     <string name="history_search_found_count">找到 %1$d 条记录</string>

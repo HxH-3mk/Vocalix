@@ -117,7 +117,6 @@ Are you sure you want to continue?</string>
     <string name="export_dialog_title">📤 Export Transcript</string>
     <string name="export_format_pdf">Formatted PDF Document (.pdf)</string>
     <string name="export_format_txt">Plain Text File (.txt)</string>
-    <string name="export_format_srt">Subtitle File with Timestamps (.srt)</string>
     <string name="settings_biometric_title">Lock History with Biometrics</string>
     <string name="settings_biometric_desc">Require fingerprint or screen lock to access transcripts</string>
     <string name="biometric_prompt_title">Unlock Script History</string>

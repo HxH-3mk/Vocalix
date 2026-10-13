@@ -59,7 +59,7 @@ Designed with a modern **Material Design 3** philosophy and **AMOLED True-Black*
   All history and scripts are kept 100% locally on your device. Secure your history vault with biometric authentication (Fingerprint / Face Unlock / Screen Lock PIN).
 
 - **💾 Multi-Format Export & History Backup:**
-  - Export transcripts to `TXT`, `SRT` (Subtitles), `VTT`, `Markdown`, and `JSON`.
+  - Export transcripts and summaries directly to `PDF` and `TXT`.
   - Full encrypted backup and restore functionality to safeguard your transcripts across devices.
 
 - **🌍 12+ Localized Languages:**
@@ -100,7 +100,7 @@ Designed with a modern **Material Design 3** philosophy and **AMOLED True-Black*
    بياناتك وسجلاتك محفوظة محلياً بالكامل على جهازك، مع إمكانية قفل السجل ببصمة الإصبع أو رمز قفل الشاشة.
 
 8. **📤 خيارات تصدير ونسخ احتياطي شاملة:**
-   تصدير النصوص بصيغ `TXT` و `SRT` (ملفات ترجمة) و `VTT` و `Markdown` و `JSON` مع دعم النسخ الاحتياطي والاستعادة.
+   تصدير النصوص والملخصات بصيغ `PDF` و `TXT` المنسقة مع دعم النسخ الاحتياطي والاستعادة.
 
 9. **🌍 دعم أكثر من 12 لغة عالمية:**
    واجهة تدعم العربية، الإنجليزية، الفرنسية، الإسبانية، الألمانية، التركية، وغيرها.

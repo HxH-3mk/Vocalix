@@ -115,7 +115,6 @@ Möchten Sie wirklich fortfahren?</string>
     <string name="btn_transcribe_recording">🚀 Jetzt transkribieren</string>
     <string name="export_dialog_title">📤 Transkript exportieren</string>
     <string name="export_format_pdf">Formatiertes PDF-Dokument (.pdf)</string>
-    <string name="export_format_srt">Untertiteldatei mit Zeitstempeln (.srt)</string>
     <string name="export_format_txt">Einfache Textdatei (.txt)</string>
     <string name="record_perm_denied">Mikrofonberechtigung verweigert</string>
     <string name="record_permission_required">Mikrofonberechtigung für Aufnahme erforderlich</string>

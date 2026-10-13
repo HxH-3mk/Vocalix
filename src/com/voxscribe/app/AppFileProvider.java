@@ -49,7 +49,6 @@ public class AppFileProvider extends ContentProvider {
         if (name != null) {
             if (name.endsWith(".pdf")) return "application/pdf";
             if (name.endsWith(".txt")) return "text/plain";
-            if (name.endsWith(".srt")) return "application/x-subrip";
             if (name.endsWith(".json")) return "application/json";
             if (name.endsWith(".m4a")) return "audio/mp4";
             if (name.endsWith(".wav")) return "audio/wav";

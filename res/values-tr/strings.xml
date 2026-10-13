@@ -115,7 +115,6 @@ Devam etmek istediğinize emin misiniz?</string>
     <string name="btn_transcribe_recording">🚀 Şimdi Deşifre Et</string>
     <string name="export_dialog_title">📤 Transkripti Dışa Aktar</string>
     <string name="export_format_pdf">Biçimlendirilmiş PDF Belgesi (.pdf)</string>
-    <string name="export_format_srt">Zaman Damgalı Altyazı Dosyası (.srt)</string>
     <string name="export_format_txt">Düz Metin Dosyası (.txt)</string>
     <string name="record_perm_denied">Mikrofon izni reddedildi</string>
     <string name="record_permission_required">Kayıt yapmak için mikrofon izni gereklidir</string>

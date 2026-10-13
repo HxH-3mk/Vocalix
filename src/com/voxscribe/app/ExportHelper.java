@@ -171,71 +171,7 @@ public class ExportHelper {
         return outFile;
     }
 
-    public static File exportToSrt(Context context, String text) throws Exception {
-        StringBuilder sb = new StringBuilder();
-        String[] rawSentences = text.split("(?<=[.!?طŒطں\n])\\s+");
-        List<String> blocks = new ArrayList<>();
 
-        for (String s : rawSentences) {
-            String trimmed = s.trim();
-            if (trimmed.isEmpty()) continue;
-            // If sentence is very long, chunk it by ~10 words
-            String[] words = trimmed.split("\\s+");
-            if (words.length > 12) {
-                StringBuilder chunk = new StringBuilder();
-                int wordCount = 0;
-                for (String w : words) {
-                    chunk.append(w).append(" ");
-                    wordCount++;
-                    if (wordCount >= 10) {
-                        blocks.add(chunk.toString().trim());
-                        chunk.setLength(0);
-                        wordCount = 0;
-                    }
-                }
-                if (chunk.length() > 0) {
-                    blocks.add(chunk.toString().trim());
-                }
-            } else {
-                blocks.add(trimmed);
-            }
-        }
-
-        if (blocks.isEmpty()) {
-            blocks.add(text.trim());
-        }
-
-        long currentMillis = 0;
-        int index = 1;
-        for (String block : blocks) {
-            int wordCount = block.split("\\s+").length;
-            long durationMillis = Math.max(2500, Math.min(8000, wordCount * 380L));
-            long endMillis = currentMillis + durationMillis;
-
-            sb.append(index).append("\n");
-            sb.append(formatSrtTime(currentMillis)).append(" --> ").append(formatSrtTime(endMillis)).append("\n");
-            sb.append(block).append("\n\n");
-
-            currentMillis = endMillis + 200;
-            index++;
-        }
-
-        File outFile = new File(context.getCacheDir(), "voxscribe_subtitles_" + System.currentTimeMillis() + ".srt");
-        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)) {
-            writer.write(sb.toString());
-        }
-        return outFile;
-    }
-
-    private static String formatSrtTime(long millis) {
-        long hours = millis / 3600000;
-        long rem = millis % 3600000;
-        long minutes = rem / 60000;
-        rem = rem % 60000;
-        long seconds = rem / 1000;
-        long ms = rem % 1000;
-        return String.format(Locale.ROOT, "%02d:%02d:%02d,%03d", hours, minutes, seconds, ms);
-    }
 
     public static void shareFile(Context context, File file, String mimeType, String title) {
         Uri contentUri = AppFileProvider.getUriForFile(context, file);

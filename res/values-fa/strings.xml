@@ -108,7 +108,6 @@
     <string name="btn_transcribe_recording">🚀 اکنون رونوشت بگیرید</string>
     <string name="export_dialog_title">📤 خروجی گرفتن از رونوشت</string>
     <string name="export_format_pdf">سند PDF قالب‌بندی شده (.pdf)</string>
-    <string name="export_format_srt">فایل زیرنویس با زمان‌بندی (.srt)</string>
     <string name="export_format_txt">فایل متنی ساده (.txt)</string>
     <string name="history_matches_in_script">%1$d تطابق در متن</string>
     <string name="history_search_found_count">%1$d رونوشت پیدا شد</string>

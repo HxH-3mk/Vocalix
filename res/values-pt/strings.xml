@@ -108,7 +108,6 @@ Tem certeza de que deseja continuar?</string>
     <string name="btn_transcribe_recording">🚀 Transcrever agora</string>
     <string name="export_dialog_title">📤 Exportar transcrição</string>
     <string name="export_format_pdf">Documento PDF formatado (.pdf)</string>
-    <string name="export_format_srt">Arquivo de legenda com carimbos de data/hora (.srt)</string>
     <string name="export_format_txt">Arquivo de texto simples (.txt)</string>
     <string name="history_matches_in_script">%1$d correspondência(s) no texto</string>
     <string name="history_search_found_count">%1$d transcrição(ões) encontrada(s)</string>

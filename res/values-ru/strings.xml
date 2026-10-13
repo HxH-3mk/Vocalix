@@ -115,7 +115,6 @@
     <string name="btn_transcribe_recording">🚀 Транскрибировать сейчас</string>
     <string name="export_dialog_title">📤 Экспорт транскрипции</string>
     <string name="export_format_pdf">Форматированный документ PDF (.pdf)</string>
-    <string name="export_format_srt">Файл субтитров с временными метками (.srt)</string>
     <string name="export_format_txt">Простой текстовый файл (.txt)</string>
     <string name="record_perm_denied">В разрешении на микрофон отказано</string>
     <string name="record_permission_required">Для записи требуется разрешение на микрофон</string>

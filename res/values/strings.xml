@@ -115,7 +115,6 @@
     <string name="export_dialog_title">📤 تصدير التفريغ</string>
     <string name="export_format_pdf">مستند PDF منسق (.pdf)</string>
     <string name="export_format_txt">ملف نصي عادي (.txt)</string>
-    <string name="export_format_srt">ملف ترجمة وتوقيت (.srt)</string>
     <string name="settings_biometric_title">قفل السجل بالأمان والبصمة</string>
     <string name="settings_biometric_desc">طلب بصمة الإصبع أو قفل الشاشة للدخول إلى سجل السكربتات</string>
     <string name="biometric_prompt_title">فتح سجل السكربتات</string>

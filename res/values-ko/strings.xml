@@ -108,7 +108,6 @@
     <string name="btn_transcribe_recording">🚀 지금 텍스트 변환</string>
     <string name="export_dialog_title">📤 텍스트 기록 내보내기</string>
     <string name="export_format_pdf">서식 있는 PDF 문서 (.pdf)</string>
-    <string name="export_format_srt">타임스탬프가 포함된 자막 파일 (.srt)</string>
     <string name="export_format_txt">일반 텍스트 파일 (.txt)</string>
     <string name="history_matches_in_script">텍스트에서 %1$d개 일치</string>
     <string name="history_search_found_count">%1$d개의 텍스트 기록 발견</string>

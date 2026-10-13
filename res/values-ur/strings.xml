@@ -108,7 +108,6 @@
     <string name="btn_transcribe_recording">🚀 اب ٹرانسکرائب کریں</string>
     <string name="export_dialog_title">📤 ٹرانسکرپٹ برآمد کریں</string>
     <string name="export_format_pdf">فارمیٹ شدہ PDF دستاویز (.pdf)</string>
-    <string name="export_format_srt">ٹائم اسٹیمپ والی سب ٹائٹل فائل (.srt)</string>
     <string name="export_format_txt">سادہ ٹیکسٹ فائل (.txt)</string>
     <string name="history_matches_in_script">متن میں %1$d میچز</string>
     <string name="history_search_found_count">%1$d ٹرانسکرپٹ ملے</string>
