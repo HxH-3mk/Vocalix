@@ -144,4 +144,6 @@
     <string name="notif_complete_title">تبدیل صوت با موفقیت انجام شد ✓</string>
     <string name="notif_complete_desc">برای باز کردن برنامه و مشاهده متن و خلاصه ضربه بزنید</string>
     <string name="bg_notif_perm_required">برای نمایش وضعیت در پس‌زمینه مجوز اعلان لازم است</string>
+    <string name="settings_coffee_title">☕ حمایت از توسعه‌دهنده (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">کمک به رایگان، سریع و به‌روز نگه‌داشتن برنامه</string>
 </resources>

@@ -144,4 +144,6 @@
     <string name="notif_complete_title">오디오 변환이 성공적으로 완료되었습니다 ✓</string>
     <string name="notif_complete_desc">앱을 열어 텍스트와 요약을 보려면 탭하세요</string>
     <string name="bg_notif_perm_required">백그라운드 상태 표시를 위해 알림 권한이 필요합니다</string>
+    <string name="settings_coffee_title">☕ 개발자 후원하기 (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">VoxScribe를 무료로 빠르고 지속적으로 유지할 수 있도록 후원하기</string>
 </resources>

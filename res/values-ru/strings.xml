@@ -144,4 +144,6 @@
     <string name="notif_complete_title">Транскрибация успешно завершена ✓</string>
     <string name="notif_complete_desc">Нажмите, чтобы открыть приложение и просмотреть результат</string>
     <string name="bg_notif_perm_required">Требуется разрешение на отправку уведомлений</string>
+    <string name="settings_coffee_title">☕ Поддержать разработчика (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">Помогите развивать VoxScribe бесплатным, быстрым и актуальным</string>
 </resources>

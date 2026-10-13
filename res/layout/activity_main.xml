@@ -1672,6 +1672,61 @@
 
                     </LinearLayout>
 
+                    <!-- Section: Buy Me a Coffee Support Card -->
+                    <LinearLayout
+                        android:id="@+id/settings_card_coffee"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/card_interactive_bg"
+                        android:padding="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:layout_marginBottom="28dp">
+
+                        <TextView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:gravity="center"
+                            android:text="☕"
+                            android:textSize="22sp"
+                            android:background="@drawable/chip_bg"
+                            android:layout_marginEnd="14dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_coffee_title"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/color_primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_coffee_desc"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_secondary"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="↗"
+                            android:textSize="18sp"
+                            android:textColor="@color/color_primary"
+                            android:textStyle="bold"
+                            android:layout_marginStart="8dp" />
+                    </LinearLayout>
+
                 </LinearLayout>
             </ScrollView>
         </LinearLayout>

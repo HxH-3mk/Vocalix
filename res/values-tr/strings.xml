@@ -144,4 +144,6 @@ Devam etmek istediğinize emin misiniz?</string>
     <string name="notif_complete_title">Deşifre Başarıyla Tamamlandı ✓</string>
     <string name="notif_complete_desc">Uygulamayı açıp metni ve özeti görmek için dokunun</string>
     <string name="bg_notif_perm_required">Arka plan durumu için bildirim izni gereklidir</string>
+    <string name="settings_coffee_title">☕ Geliştiriciyi Destekle (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">VoxScribe\'ın ücretsiz, hızlı ve güncel kalmasına destek olun</string>
 </resources>

@@ -147,4 +147,6 @@
     <string name="notif_complete_title">اكتمل التفريغ بنجاح ✓</string>
     <string name="notif_complete_desc">انقر لفتح التطبيق وعرض النص والملخص</string>
     <string name="bg_notif_perm_required">يلزم منح إذن الإشعارات لإظهار حالة التفريغ في الخلفية</string>
+    <string name="settings_coffee_title">☕ ادعم المطور (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">ساهم في استمرار وتطوير التطبيق وتقديم المزيد من الميزات</string>
 </resources>

@@ -144,4 +144,6 @@ Möchten Sie wirklich fortfahren?</string>
     <string name="notif_complete_title">Transkription erfolgreich abgeschlossen ✓</string>
     <string name="notif_complete_desc">Tippen, um die App zu öffnen und das Transkript anzuzeigen</string>
     <string name="bg_notif_perm_required">Benachrichtigungsberechtigung für Hintergrundstatus erforderlich</string>
+    <string name="settings_coffee_title">☕ Entwickler unterstützen (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">Helfen Sie mit, VoxScribe kostenlos, schnell und aktuell zu halten</string>
 </resources>

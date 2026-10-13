@@ -144,4 +144,6 @@
     <string name="notif_complete_title">Transcription terminée avec succès ✓</string>
     <string name="notif_complete_desc">Appuyez pour ouvrir l\'application et afficher la transcription</string>
     <string name="bg_notif_perm_required">Autorisation de notification requise pour le statut en arrière-plan</string>
+    <string name="settings_coffee_title">☕ Soutenir le développeur (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">Aidez à maintenir VoxScribe gratuit, rapide et mis à jour</string>
 </resources>

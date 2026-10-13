@@ -144,4 +144,6 @@
     <string name="notif_complete_title">Transcripción completada con éxito ✓</string>
     <string name="notif_complete_desc">Toque para abrir la app y ver la transcripción y el resumen</string>
     <string name="bg_notif_perm_required">Se requiere permiso de notificación para el estado en segundo plano</string>
+    <string name="settings_coffee_title">☕ Apoyar al desarrollador (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">Ayuda a mantener VoxScribe gratuito, rápido y actualizado</string>
 </resources>

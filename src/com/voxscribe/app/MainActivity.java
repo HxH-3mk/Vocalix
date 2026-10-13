@@ -1248,6 +1248,18 @@ public class MainActivity extends Activity {
             settingsRowRestore.setOnClickListener(v -> openRestorePicker());
         }
 
+        View settingsCardCoffee = findViewById(R.id.settings_card_coffee);
+        if (settingsCardCoffee != null) {
+            settingsCardCoffee.setOnClickListener(v -> {
+                try {
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/hxh3mk"));
+                    startActivity(browserIntent);
+                } catch (Exception e) {
+                    Toast.makeText(this, "Could not open browser", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
         refreshSettingsUI();
     }
 

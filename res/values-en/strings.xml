@@ -149,4 +149,6 @@ Are you sure you want to continue?</string>
     <string name="notif_complete_title">Transcription Completed Successfully ✓</string>
     <string name="notif_complete_desc">Tap to open the app and view transcript and summary</string>
     <string name="bg_notif_perm_required">Notification permission is required for background status</string>
+    <string name="settings_coffee_title">☕ Support Developer (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">Help keep VoxScribe free, fast, and continuously updated</string>
 </resources>

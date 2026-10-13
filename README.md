@@ -10,6 +10,7 @@
 [![Language](https://img.shields.io/badge/Language-Java-ED8B00?logo=openjdk&logoColor=white)](https://java.com)
 [![AI Engine](https://img.shields.io/badge/AI_Engine-Gemini_%7C_OpenAI_%7C_Claude_%7C_Groq-4285F4?logo=google&logoColor=white)](https://aistudio.google.com)
 [![Design](https://img.shields.io/badge/UI-Material_3_%7C_AMOLED_Pitch_Black-000000)](https://material.io)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/hxh3mk)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 [**English**](#-overview) • [**العربية (Arabic)**](#-نظرة-عامة-عن-التطبيق)
@@ -152,6 +153,26 @@ VoxScribe utilizes official developer APIs. You can obtain a **100% Free** Googl
 2. Sign in with your Google Account and click **Create API Key**.
 3. Open **VoxScribe Settings**, paste your key, and tap **Test Key & Verify Models**.
 4. Enjoy up to **1,500 free daily requests** automatically refreshed every 24 hours.
+
+---
+
+## 💖 Support the Project / ادعم المشروع
+
+If you find **VoxScribe** helpful and appreciate its continuous open-source improvements, consider buying me a coffee to support future updates and new features! ☕
+
+إذا أعجبك التطبيق وتود المساهمة في استمرار تطويره وإضافة المزيد من النماذج والميزات الذكية بشكل مجاني دائماً، يمكنك دعم المطور عبر الرابط:
+
+<div align="center">
+
+<a href="https://buymeacoffee.com/hxh3mk" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="220">
+</a>
+
+<br/><br/>
+
+[![Buy Me A Coffee](https://img.shields.io/badge/buymeacoffee.com%2Fhxh3mk-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/hxh3mk)
+
+</div>
 
 ---
 

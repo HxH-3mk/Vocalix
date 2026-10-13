@@ -144,4 +144,6 @@
     <string name="notif_complete_title">文字起こしが正常に完了しました ✓</string>
     <string name="notif_complete_desc">タップしてアプリを開き、文字起こしと要約を表示します</string>
     <string name="bg_notif_perm_required">バックグラウンド状況を表示するには通知の許可が必要です</string>
+    <string name="settings_coffee_title">☕ 開発者を支援 (Buy Me a Coffee)</string>
+    <string name="settings_coffee_desc">VoxScribeの無料提供と継続的な改善をサポート</string>
 </resources>
