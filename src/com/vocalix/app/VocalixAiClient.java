@@ -40,15 +40,14 @@ public class VocalixAiClient {
 
     public static final String MODEL_AUTO = "auto";
 
-    // Standard prioritized model list per provider with ultra-reliable and fast models first
+    // Standard prioritized model list per provider with ultra-fast and high quota models first
     public static final List<String> GEMINI_MODELS = Arrays.asList(
-            "gemini-1.5-flash",      // 100% reliable, universal multimodal audio model
-            "gemini-1.5-flash-8b",   // Ultra-fast lightweight audio model
+            "gemini-2.5-flash",      // Next-gen ultra-fast multimodal
+            "gemini-2.5-flash-lite", // Next-gen lightweight multimodal
             "gemini-2.0-flash",      // Rapid native multimodal
             "gemini-2.0-flash-lite", // Rapid lite multimodal
-            "gemini-2.5-flash",      // Next-gen 2.5 flash
-            "gemini-2.5-flash-lite", // Next-gen 2.5 flash lite
-            "gemini-1.5-pro"         // Deep context audio
+            "gemini-1.5-flash",      // Highly reliable standard multimodal
+            "gemini-1.5-flash-8b"    // Ultra-lightweight fallback
     );
 
     public static final List<String> OPENAI_MODELS = Arrays.asList(
@@ -390,16 +389,19 @@ public class VocalixAiClient {
 
             byte[] postData = rootPayload.toString().getBytes("UTF-8");
 
+            boolean isAutoMode = (userChosenModel == null || userChosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(userChosenModel));
             List<String> modelQueue = new ArrayList<>();
-            if (userChosenModel != null && !userChosenModel.isEmpty() && !MODEL_AUTO.equalsIgnoreCase(userChosenModel)) {
+            if (!isAutoMode) {
+                // User explicitly selected a specific model - prioritize and stick to it!
                 modelQueue.add(userChosenModel.replace("models/", ""));
-            }
-            for (String fallback : GEMINI_MODELS) {
-                if (!modelQueue.contains(fallback)) modelQueue.add(fallback);
+            } else {
+                // Auto mode: cycle through prioritized fast multimodal models
+                modelQueue.addAll(GEMINI_MODELS);
             }
 
             String lastError = null;
-            for (String modelName : modelQueue) {
+            for (int i = 0; i < modelQueue.size(); i++) {
+                String modelName = modelQueue.get(i);
                 HttpURLConnection conn = null;
                 try {
                     String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":streamGenerateContent?alt=sse&key=" + apiKey;
@@ -466,7 +468,7 @@ public class VocalixAiClient {
                             while ((l = reader.readLine()) != null) errResp.append(l);
                         } catch (Exception ignored) {}
                         String errBody = errResp.toString();
-                        Log.e(TAG, "Gemini API error (" + code + "): " + errBody);
+                        Log.e(TAG, "Gemini API error (" + code + ") on [" + modelName + "]: " + errBody);
 
                         String errMsg = errBody;
                         try {
@@ -482,34 +484,55 @@ public class VocalixAiClient {
                             return;
                         }
 
+                        // Check quota limits (429)
                         if (code == 429 || errMsg.contains("Resource has been exhausted") || errMsg.contains("Quota exceeded") || errMsg.contains("rate limit")) {
-                            Log.w(TAG, "Quota error on " + modelName + ", auto-switching to next model...");
-                            lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري التحويل لنموذج بديل...";
+                            if (!isAutoMode) {
+                                callback.onError("تم استنفاد الحد اليومي (Quota) للنموذج المختار (" + modelName + "). يمكنك تفعيل الوضع التلقائي أو اختيار نموذج آخر.");
+                                return;
+                            }
+                            Log.w(TAG, "Quota error on " + modelName + ", switching to next available fallback...");
+                            lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري التحويل للنموذج التالي...";
                             continue;
                         }
 
+                        // Check model not found / unsupported (404)
                         if (code == 404 || errMsg.contains("not found") || errMsg.contains("is not supported")) {
-                            Log.w(TAG, "Model " + modelName + " not found, auto-switching...");
+                            if (!isAutoMode) {
+                                callback.onError("النموذج المختار غير مدعوم في مشروعك (" + modelName + "). يرجى اختيار نموذج آخر من الإعدادات.");
+                                return;
+                            }
+                            Log.w(TAG, "Model " + modelName + " not found or unsupported, switching...");
                             lastError = "النموذج غير متوفر (" + modelName + ")";
                             continue;
                         }
 
+                        // Service temporary unavailable (503)
                         if (code == 503) {
+                            if (!isAutoMode) {
+                                callback.onError("النموذج المختار قيد الصيانة مؤقتاً لدى Google (" + modelName + ").");
+                                return;
+                            }
                             lastError = "النموذج قيد الصيانة مؤقتاً (" + modelName + ")";
                             continue;
                         }
 
-                        lastError = errMsg;
+                        // Any other client error (e.g. 400 Bad Request, payload issue) - fail immediately without useless loops
+                        callback.onError("خطأ من Google (" + modelName + "): " + errMsg);
+                        return;
                     }
 
                 } catch (Exception e) {
-                    lastError = e.getMessage();
+                    lastError = "خطأ في الاتصال (" + modelName + "): " + e.getMessage();
+                    if (!isAutoMode) {
+                        callback.onError(lastError);
+                        return;
+                    }
                 } finally {
                     if (conn != null) conn.disconnect();
                 }
             }
 
-            callback.onError(lastError != null ? lastError : "تعذر الاتصال بالنموذج. تأكد من اتصال الإنترنت وصلاحية المفتاح.");
+            callback.onError(lastError != null ? lastError : "تعذر الاتصال بخوادم Google. تأكد من اتصالك بالإنترنت وصلاحية المفتاح.");
 
         } catch (Exception e) {
             callback.onError("خطأ: " + e.getMessage());
@@ -648,12 +671,12 @@ public class VocalixAiClient {
 
             byte[] postData = rootPayload.toString().getBytes("UTF-8");
 
+            boolean isAutoMode = (model == null || model.isEmpty() || MODEL_AUTO.equalsIgnoreCase(model));
             List<String> queue = new ArrayList<>();
-            if (model != null && !model.isEmpty() && !MODEL_AUTO.equalsIgnoreCase(model)) {
+            if (!isAutoMode) {
                 queue.add(model.replace("models/", ""));
-            }
-            for (String m : GEMINI_MODELS) {
-                if (!queue.contains(m)) queue.add(m);
+            } else {
+                queue.addAll(GEMINI_MODELS);
             }
 
             for (String mName : queue) {
