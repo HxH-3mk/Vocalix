@@ -42,10 +42,11 @@ public class VocalixAiClient {
 
     // Standard prioritized model list per provider with ultra-fast and high quota models first
     public static final List<String> GEMINI_MODELS = Arrays.asList(
+            "gemini-3.5-flash-lite", // 500 RPD ultra-fast lightweight
+            "gemini-3.1-flash-lite", // 500 RPD ultra-fast lightweight
             "gemini-2.5-flash",      // Next-gen ultra-fast multimodal
             "gemini-2.5-flash-lite", // Next-gen lightweight multimodal
             "gemini-2.0-flash",      // Rapid native multimodal
-            "gemini-2.0-flash-lite", // Rapid lite multimodal
             "gemini-1.5-flash",      // Highly reliable standard multimodal
             "gemini-1.5-flash-8b"    // Ultra-lightweight fallback
     );
@@ -184,24 +185,47 @@ public class VocalixAiClient {
     private static boolean checkModelReadiness(String modelName, String apiKey) {
         HttpURLConnection conn = null;
         try {
-            // First check model resource metadata (lightning fast GET request with 0 payload)
+            // First check model resource metadata via GET (instant 0-payload query)
             URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + "?key=" + apiKey);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(4000);
-            conn.setReadTimeout(4000);
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
             int code = conn.getResponseCode();
-            if (code == 404) {
-                // Model not accessible or not found
+            if (code == 404 || code == 429) {
                 return false;
             }
-            if (code == 429) {
-                // Quota already exhausted
-                return false;
+            if (code >= 200 && code < 300) {
+                return true;
             }
-            return (code >= 200 && code < 300);
+            // If GET metadata returns 400 or other code, attempt a tiny ping (1-token generateContent)
+            return testModelGenerationPing(modelName, apiKey);
         } catch (Exception e) {
-            // If network pre-check times out or fails, allow normal attempt rather than falsely blocking
+            // In case of network jitter or timeout, don't falsely block the model
+            return true;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static boolean testModelGenerationPing(String modelName, String apiKey) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            conn.setDoOutput(true);
+            String tinyPayload = "{\"contents\":[{\"parts\":[{\"text\":\"hi\"}]}],\"generationConfig\":{\"maxOutputTokens\":1}}";
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(tinyPayload.getBytes("UTF-8"));
+                os.flush();
+            }
+            int code = conn.getResponseCode();
+            return (code != 404 && code != 429 && code != 503);
+        } catch (Exception e) {
             return true;
         } finally {
             if (conn != null) conn.disconnect();
@@ -425,23 +449,34 @@ public class VocalixAiClient {
                 // User explicitly selected a specific model - prioritize and stick to it!
                 modelQueue.add(userChosenModel.replace("models/", ""));
             } else {
-                // Auto mode: cycle through prioritized fast multimodal models
-                modelQueue.addAll(GEMINI_MODELS);
+                // Dynamically fetch account's supported models if possible to guarantee working candidates
+                List<String> liveModels = new ArrayList<>();
+                queryGeminiModels("v1beta", apiKey, liveModels);
+                if (!liveModels.isEmpty()) {
+                    // Prioritize fast Flash Lite and Flash models that actually exist in the user's project
+                    for (String pref : GEMINI_MODELS) {
+                        if (liveModels.contains(pref) && !modelQueue.contains(pref)) {
+                            modelQueue.add(pref);
+                        }
+                    }
+                    // Append other supported live models
+                    for (String lm : liveModels) {
+                        if (!modelQueue.contains(lm) && (lm.contains("flash") || lm.contains("lite"))) {
+                            modelQueue.add(lm);
+                        }
+                    }
+                }
+                // If live query yielded nothing or failed, use static priority list
+                for (String fallback : GEMINI_MODELS) {
+                    if (!modelQueue.contains(fallback)) {
+                        modelQueue.add(fallback);
+                    }
+                }
             }
 
             String lastError = null;
             for (int i = 0; i < modelQueue.size(); i++) {
                 String modelName = modelQueue.get(i);
-
-                // Quick pre-check: verify model responsiveness before uploading large audio payload
-                if (!checkModelReadiness(modelName, apiKey)) {
-                    Log.w(TAG, "Model " + modelName + " failed quick readiness check (quota or unavailable), skipping...");
-                    if (!isAutoMode) {
-                        callback.onError("النموذج المختار (" + modelName + ") غير جاهز حالياً أو استنفد حده اليومي. يرجى اختيار نموذج آخر أو تفعيل الوضع التلقائي.");
-                        return;
-                    }
-                    continue;
-                }
 
                 HttpURLConnection conn = null;
                 try {
