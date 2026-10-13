@@ -40,11 +40,12 @@ public class VocalixAiClient {
 
     public static final String MODEL_AUTO = "auto";
 
-    // Standard prioritized model list per provider with ultra-fast models first
+    // Standard prioritized model list per provider with ultra-reliable and fast models first
     public static final List<String> GEMINI_MODELS = Arrays.asList(
-            "gemini-2.0-flash",      // Ultra-fast instant native audio processing
-            "gemini-2.0-flash-lite", // Ultra-fast lightweight multimodal
-            "gemini-1.5-flash",      // Universal high reliability fallback
+            "gemini-1.5-flash",      // 100% reliable, universal multimodal audio model
+            "gemini-1.5-flash-8b",   // Ultra-fast lightweight audio model
+            "gemini-2.0-flash",      // Rapid native multimodal
+            "gemini-2.0-flash-lite", // Rapid lite multimodal
             "gemini-2.5-flash",      // Next-gen 2.5 flash
             "gemini-2.5-flash-lite", // Next-gen 2.5 flash lite
             "gemini-1.5-pro"         // Deep context audio
@@ -458,14 +459,6 @@ public class VocalixAiClient {
                             callback.onSuccess(finalTranscribed);
                             return;
                         }
-                    } else if (code == 429) {
-                        Log.w(TAG, "Quota / Rate limit reached on " + modelName + ", auto-switching to next model...");
-                        lastError = "تم استنفاد الحد اليومي للنموذج (" + modelName + ")، جاري التبديل التلقائي للنموذج التالي...";
-                        continue;
-                    } else if (code == 404 || code == 400 || code == 503) {
-                        Log.w(TAG, "Model unavailable (" + code + ") on " + modelName + ", auto-switching to next model...");
-                        lastError = "النموذج غير متوفر أو قيد الصيانة مؤقتاً (" + modelName + ")";
-                        continue;
                     } else {
                         StringBuilder errResp = new StringBuilder();
                         try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "UTF-8"))) {
@@ -473,27 +466,40 @@ public class VocalixAiClient {
                             while ((l = reader.readLine()) != null) errResp.append(l);
                         } catch (Exception ignored) {}
                         String errBody = errResp.toString();
+                        Log.e(TAG, "Gemini API error (" + code + "): " + errBody);
+
+                        String errMsg = errBody;
                         try {
                             JSONObject errJson = new JSONObject(errBody);
                             JSONObject errObj = errJson.optJSONObject("error");
                             if (errObj != null) {
-                                String msg = errObj.optString("message", errBody);
-                                if (msg.contains("API key") || msg.contains("API_KEY_INVALID")) {
-                                    callback.onError("مفتاح API غير صالح. تأكد من نسخه بشكل صحيح.");
-                                    return;
-                                }
-                                if (msg.contains("Resource has been exhausted") || msg.contains("Quota exceeded") || msg.contains("rate limit")) {
-                                    Log.w(TAG, "Quota error on " + modelName + ", auto-switching to next model...");
-                                    lastError = "تم تجاوز حد استخدام " + modelName + "، جاري التحويل لنموذج بديل...";
-                                    continue;
-                                }
-                                lastError = msg;
-                            } else {
-                                lastError = errBody;
+                                errMsg = errObj.optString("message", errBody);
                             }
-                        } catch (Exception parseEx) {
-                            lastError = errBody;
+                        } catch (Exception ignored) {}
+
+                        if (errMsg.contains("API key") || errMsg.contains("API_KEY_INVALID") || errMsg.contains("API key not valid")) {
+                            callback.onError("مفتاح API غير صالح أو غير صحيح. يرجى التحقق من المفتاح في الإعدادات.");
+                            return;
                         }
+
+                        if (code == 429 || errMsg.contains("Resource has been exhausted") || errMsg.contains("Quota exceeded") || errMsg.contains("rate limit")) {
+                            Log.w(TAG, "Quota error on " + modelName + ", auto-switching to next model...");
+                            lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري التحويل لنموذج بديل...";
+                            continue;
+                        }
+
+                        if (code == 404 || errMsg.contains("not found") || errMsg.contains("is not supported")) {
+                            Log.w(TAG, "Model " + modelName + " not found, auto-switching...");
+                            lastError = "النموذج غير متوفر (" + modelName + ")";
+                            continue;
+                        }
+
+                        if (code == 503) {
+                            lastError = "النموذج قيد الصيانة مؤقتاً (" + modelName + ")";
+                            continue;
+                        }
+
+                        lastError = errMsg;
                     }
 
                 } catch (Exception e) {
