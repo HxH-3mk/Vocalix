@@ -639,9 +639,21 @@ public class VocalixAiClient {
 
             try (OutputStream os = conn.getOutputStream()) {
                 // model parameter
+                String effectiveModel = modelName;
+                if (effectiveModel == null || effectiveModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(effectiveModel)) {
+                    effectiveModel = endpointUrl.contains("groq.com") ? "whisper-large-v3" : "whisper-1";
+                }
                 os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
                 os.write(("Content-Disposition: form-data; name=\"model\"\r\n\r\n").getBytes("UTF-8"));
-                os.write((modelName + "\r\n").getBytes("UTF-8"));
+                os.write((effectiveModel + "\r\n").getBytes("UTF-8"));
+
+                // prompt parameter (for multi-speaker and transcription guiding)
+                if (splitSpeakers) {
+                    String diarPrompt = "المتحدث 1: السلام عليكم. المتحدث 2: وعليكم السلام. المتحدث 3: أهلاً بكم.";
+                    os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
+                    os.write(("Content-Disposition: form-data; name=\"prompt\"\r\n\r\n").getBytes("UTF-8"));
+                    os.write((diarPrompt + "\r\n").getBytes("UTF-8"));
+                }
 
                 // response_format
                 os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
@@ -895,8 +907,12 @@ public class VocalixAiClient {
             conn.setReadTimeout(25000);
             conn.setDoOutput(true);
 
+            String effectiveModel = model;
+            if (effectiveModel == null || effectiveModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(effectiveModel)) {
+                effectiveModel = "claude-3-5-haiku-latest";
+            }
             JSONObject root = new JSONObject();
-            root.put("model", model);
+            root.put("model", effectiveModel);
             root.put("max_tokens", 1024);
             root.put("system", "Summarize this audio transcript cleanly in bullet points in its own exact native language.");
 
