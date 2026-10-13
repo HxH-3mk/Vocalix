@@ -448,6 +448,10 @@ public class VocalixAiClient {
 
             JSONObject genConfig = new JSONObject();
             genConfig.put("temperature", 0.1);
+            // Explicitly disable Thinking mode: give answers directly without hesitation or thinking delay
+            JSONObject thinkingConfig = new JSONObject();
+            thinkingConfig.put("thinking_budget", 0);
+            genConfig.put("thinkingConfig", thinkingConfig);
             rootPayload.put("generationConfig", genConfig);
 
             byte[] postData = rootPayload.toString().getBytes("UTF-8");
@@ -764,6 +768,9 @@ public class VocalixAiClient {
 
             JSONObject genConfig = new JSONObject();
             genConfig.put("temperature", 0.2);
+            JSONObject thinkingConfig = new JSONObject();
+            thinkingConfig.put("thinking_budget", 0);
+            genConfig.put("thinkingConfig", thinkingConfig);
             rootPayload.put("generationConfig", genConfig);
 
             byte[] postData = rootPayload.toString().getBytes("UTF-8");
