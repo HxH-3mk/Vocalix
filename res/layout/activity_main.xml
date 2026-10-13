@@ -538,6 +538,20 @@
                             android:textColor="@color/text_primary" />
 
                         <Button
+                            android:id="@+id/btnRetrySummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="30dp"
+                            android:text="@string/btn_retry"
+                            android:textSize="11sp"
+                            android:singleLine="true"
+                            android:textColor="@color/color_primary"
+                            android:background="@drawable/button_secondary"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:layout_marginEnd="6dp"
+                            android:visibility="gone" />
+
+                        <Button
                             android:id="@+id/btnCopySummary"
                             android:layout_width="wrap_content"
                             android:layout_height="30dp"

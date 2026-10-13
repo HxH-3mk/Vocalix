@@ -196,6 +196,8 @@ public class MainActivity extends Activity {
     private TextView tvSummaryContent;
     private View pbSummary;
     private Button btnCopySummary;
+    private Button btnRetrySummary;
+    private String lastTranscribedText = "";
 
     // Tab 2 (History) UI elements
     private View layoutHistoryDisabled;
@@ -390,6 +392,18 @@ public class MainActivity extends Activity {
         }
         pbSummary = findViewById(R.id.pbSummary);
         btnCopySummary = findViewById(R.id.btnCopySummary);
+        btnRetrySummary = findViewById(R.id.btnRetrySummary);
+
+        if (btnRetrySummary != null) {
+            btnRetrySummary.setOnClickListener(v -> {
+                btnRetrySummary.setVisibility(View.GONE);
+                String apiKey = prefs.getString(KEY_API_KEY, "");
+                if (!lastTranscribedText.isEmpty() && !apiKey.isEmpty()) {
+                    Toast.makeText(this, "جاري إعادة محاولة توليد الملخص وتجربة النماذج التالية...", Toast.LENGTH_SHORT).show();
+                    generateSummary(lastTranscribedText, apiKey);
+                }
+            });
+        }
 
         if (btnCopySummary != null) {
             btnCopySummary.setOnClickListener(v -> {
@@ -1704,11 +1718,16 @@ public class MainActivity extends Activity {
             return;
         }
 
+        lastTranscribedText = text;
+
         if (layoutSummaryContainer != null) {
             layoutSummaryContainer.setVisibility(View.VISIBLE);
         }
         if (pbSummary != null) {
             pbSummary.setVisibility(View.VISIBLE);
+        }
+        if (btnRetrySummary != null) {
+            btnRetrySummary.setVisibility(View.GONE);
         }
         if (tvSummaryContent != null) {
             tvSummaryContent.setText(R.string.generating_summary);
@@ -1723,6 +1742,7 @@ public class MainActivity extends Activity {
                 recordUsageHit();
                 runOnUiThread(() -> {
                     if (pbSummary != null) pbSummary.setVisibility(View.GONE);
+                    if (btnRetrySummary != null) btnRetrySummary.setVisibility(View.GONE);
                     if (tvSummaryContent != null) tvSummaryContent.setText(summary);
 
                     // Update history entry with the generated summary
@@ -1734,8 +1754,9 @@ public class MainActivity extends Activity {
             public void onError(String error) {
                 runOnUiThread(() -> {
                     if (pbSummary != null) pbSummary.setVisibility(View.GONE);
+                    if (btnRetrySummary != null) btnRetrySummary.setVisibility(View.VISIBLE);
                     if (tvSummaryContent != null) {
-                        tvSummaryContent.setText("تعذر توليد الملخص: " + error);
+                        tvSummaryContent.setText("تعذر توليد الملخص (" + error + "). اضغط إعادة المحاولة للتجربة بنموذج بديل.");
                     }
                 });
             }

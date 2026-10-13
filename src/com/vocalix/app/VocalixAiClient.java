@@ -459,31 +459,13 @@ public class VocalixAiClient {
             boolean isAutoMode = (userChosenModel == null || userChosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(userChosenModel));
             List<String> modelQueue = new ArrayList<>();
             if (!isAutoMode) {
-                // User explicitly selected a specific model - prioritize and stick to it!
+                // User explicitly selected a specific model - prioritize it as first choice
                 modelQueue.add(userChosenModel.replace("models/", ""));
-            } else {
-                // Dynamically fetch account's supported models if possible to guarantee working candidates
-                List<String> liveModels = new ArrayList<>();
-                queryGeminiModels("v1beta", apiKey, liveModels);
-                if (!liveModels.isEmpty()) {
-                    // Prioritize fast Flash Lite and Flash models that actually exist in the user's project
-                    for (String pref : GEMINI_MODELS) {
-                        if (liveModels.contains(pref) && !modelQueue.contains(pref)) {
-                            modelQueue.add(pref);
-                        }
-                    }
-                    // Append other supported live models
-                    for (String lm : liveModels) {
-                        if (!modelQueue.contains(lm) && (lm.contains("flash") || lm.contains("lite"))) {
-                            modelQueue.add(lm);
-                        }
-                    }
-                }
-                // If live query yielded nothing or failed, use static priority list
-                for (String fallback : GEMINI_MODELS) {
-                    if (!modelQueue.contains(fallback)) {
-                        modelQueue.add(fallback);
-                    }
+            }
+            // Always append prioritized fast high-quota models so failover or retry can seamlessly continue
+            for (String pref : GEMINI_MODELS) {
+                if (!modelQueue.contains(pref)) {
+                    modelQueue.add(pref);
                 }
             }
 
@@ -575,32 +557,20 @@ public class VocalixAiClient {
 
                         // Check quota limits (429)
                         if (code == 429 || errMsg.contains("Resource has been exhausted") || errMsg.contains("Quota exceeded") || errMsg.contains("rate limit")) {
-                            if (!isAutoMode) {
-                                callback.onError("تم استنفاد الحد اليومي (Quota) للنموذج المختار (" + modelName + "). يمكنك تفعيل الوضع التلقائي أو اختيار نموذج آخر.");
-                                return;
-                            }
                             Log.w(TAG, "Quota error on " + modelName + ", switching to next available fallback...");
-                            lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري التحويل للنموذج التالي...";
+                            lastError = "تم استنفاد حصة استخدام " + modelName + "، جاري تجربة النموذج التالي...";
                             continue;
                         }
 
                         // Check model not found / unsupported (404)
                         if (code == 404 || errMsg.contains("not found") || errMsg.contains("is not supported")) {
-                            if (!isAutoMode) {
-                                callback.onError("النموذج المختار غير مدعوم في مشروعك (" + modelName + "). يرجى اختيار نموذج آخر من الإعدادات.");
-                                return;
-                            }
-                            Log.w(TAG, "Model " + modelName + " not found or unsupported, switching...");
+                            Log.w(TAG, "Model " + modelName + " not found or unsupported, switching to next...");
                             lastError = "النموذج غير متوفر (" + modelName + ")";
                             continue;
                         }
 
                         // Service temporary unavailable (503)
                         if (code == 503) {
-                            if (!isAutoMode) {
-                                callback.onError("النموذج المختار قيد الصيانة مؤقتاً لدى Google (" + modelName + ").");
-                                return;
-                            }
                             lastError = "النموذج قيد الصيانة مؤقتاً (" + modelName + ")";
                             continue;
                         }
@@ -612,10 +582,6 @@ public class VocalixAiClient {
 
                 } catch (Exception e) {
                     lastError = "خطأ في الاتصال (" + modelName + "): " + e.getMessage();
-                    if (!isAutoMode) {
-                        callback.onError(lastError);
-                        return;
-                    }
                 } finally {
                     if (conn != null) conn.disconnect();
                 }
@@ -779,10 +745,13 @@ public class VocalixAiClient {
             List<String> queue = new ArrayList<>();
             if (!isAutoMode) {
                 queue.add(model.replace("models/", ""));
-            } else {
-                queue.addAll(GEMINI_MODELS);
+            }
+            // Populate fallback models in order of speed and high quota
+            for (String m : GEMINI_MODELS) {
+                if (!queue.contains(m)) queue.add(m);
             }
 
+            String lastSumError = null;
             for (String mName : queue) {
                 HttpURLConnection conn = null;
                 try {
@@ -829,8 +798,12 @@ public class VocalixAiClient {
                                 }
                             }
                         }
+                    } else {
+                        Log.w(TAG, "Summarize failed on " + mName + " (" + code + "), trying next model...");
+                        lastSumError = "النموذج " + mName + " (" + code + ")";
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    lastSumError = e.getMessage();
                 } finally {
                     if (conn != null) conn.disconnect();
                 }
