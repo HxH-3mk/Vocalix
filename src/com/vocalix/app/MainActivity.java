@@ -191,6 +191,17 @@ public class MainActivity extends Activity {
     private Handler playerHandler = new Handler(Looper.getMainLooper());
     private Runnable playerRunnable;
 
+    /** Set in onDestroy: background AI callbacks must not touch views of a dead Activity. */
+    private volatile boolean isActivityDestroyed = false;
+
+    /** Main-thread post that is safe after the Activity is destroyed (prevents leaks/crashes). */
+    private void runOnUiThreadSafe(Runnable r) {
+        if (isActivityDestroyed || isFinishing()) return;
+        runOnUiThread(() -> {
+            if (!isActivityDestroyed && !isFinishing()) r.run();
+        });
+    }
+
     // Summary Card elements
     private LinearLayout layoutSummaryContainer;
     private TextView tvSummaryContent;
@@ -1668,7 +1679,7 @@ public class MainActivity extends Activity {
         VocalixAiClient.transcribe(currentRawAudioFile, currentMimeType, provider, model, apiKey, splitSpeakers, new VocalixAiClient.TranscribeCallback() {
             @Override
             public void onPartialChunk(String partialText) {
-                runOnUiThread(() -> {
+                runOnUiThreadSafe(() -> {
                     if (etResult != null) {
                         etResult.setText(partialText);
                         etResult.setSelection(partialText.length());
@@ -1681,7 +1692,7 @@ public class MainActivity extends Activity {
             public void onSuccess(String text) {
                 recordUsageHit();
                 NotificationHelper.dismissTranscribingNotification(MainActivity.this, true);
-                runOnUiThread(() -> {
+                runOnUiThreadSafe(() -> {
                     progressBar.setVisibility(View.GONE);
                     btnRetry.setVisibility(View.GONE);
                     etResult.setText(text);
@@ -1699,7 +1710,7 @@ public class MainActivity extends Activity {
             @Override
             public void onError(String error) {
                 NotificationHelper.dismissTranscribingNotification(MainActivity.this, false);
-                runOnUiThread(() -> {
+                runOnUiThreadSafe(() -> {
                     progressBar.setVisibility(View.GONE);
                     btnRetry.setVisibility(View.VISIBLE);
                     tvStatus.setText(getString(R.string.status_error) + error);
@@ -1740,7 +1751,7 @@ public class MainActivity extends Activity {
             @Override
             public void onSuccess(String summary) {
                 recordUsageHit();
-                runOnUiThread(() -> {
+                runOnUiThreadSafe(() -> {
                     if (pbSummary != null) pbSummary.setVisibility(View.GONE);
                     if (btnRetrySummary != null) btnRetrySummary.setVisibility(View.GONE);
                     if (tvSummaryContent != null) tvSummaryContent.setText(summary);
@@ -1752,7 +1763,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> {
+                runOnUiThreadSafe(() -> {
                     if (pbSummary != null) pbSummary.setVisibility(View.GONE);
                     if (btnRetrySummary != null) btnRetrySummary.setVisibility(View.VISIBLE);
                     if (tvSummaryContent != null) {
@@ -2000,6 +2011,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        isActivityDestroyed = true;
+        recordTimerHandler.removeCallbacksAndMessages(null);
+        playerHandler.removeCallbacksAndMessages(null);
         super.onDestroy();
         NotificationHelper.dismissTranscribingNotification(this, false);
         if (isRecording) {

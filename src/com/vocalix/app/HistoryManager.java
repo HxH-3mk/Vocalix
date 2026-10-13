@@ -92,7 +92,7 @@ public class HistoryManager {
             entries = entries.subList(0, 100);
         }
 
-        saveAllEntries(context, entries);
+        saveAllEntriesAsync(context, entries);
     }
 
     public static void updateSummary(Context context, String text, String summary) {
@@ -102,7 +102,7 @@ public class HistoryManager {
         List<HistoryEntry> entries = getHistoryEntries(context);
         if (!entries.isEmpty() && entries.get(0).text.equals(text.trim())) {
             entries.get(0).summary = summary != null ? summary.trim() : "";
-            saveAllEntries(context, entries);
+            saveAllEntriesAsync(context, entries);
         }
     }
 
@@ -130,7 +130,7 @@ public class HistoryManager {
                 updated.add(e);
             }
         }
-        saveAllEntries(context, updated);
+        saveAllEntriesAsync(context, updated);
     }
 
     public static void clearAll(Context context) {
@@ -143,19 +143,34 @@ public class HistoryManager {
     }
 
     public static void saveAllEntriesDirect(Context context, List<HistoryEntry> list) {
-        saveAllEntries(context, list);
+        saveAllEntriesAsync(context, list);
     }
 
-    private static void saveAllEntries(Context context, List<HistoryEntry> list) {
-        JSONArray arr = new JSONArray();
+    private static final java.util.concurrent.ExecutorService HISTORY_IO =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "VocalixHistoryIO");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /** Background JSON serialization + SharedPreferences write: keeps big transcripts off the main thread (ANR-safe). */
+    private static void saveAllEntriesAsync(Context context, List<HistoryEntry> list) {
+        // Application context: never hold an Activity reference from a worker thread.
+        final Context app = context.getApplicationContext();
+        final JSONArray arr = new JSONArray();
         for (HistoryEntry e : list) {
             JSONObject obj = e.toJson();
             if (obj != null) {
                 arr.put(obj);
             }
         }
-        SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        sp.edit().putString(KEY_HISTORY_ITEMS, arr.toString()).apply();
+        final String payload = arr.toString();
+        HISTORY_IO.execute(() -> {
+            try {
+                SharedPreferences sp = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                sp.edit().putString(KEY_HISTORY_ITEMS, payload).apply();
+            } catch (Exception ignored) {}
+        });
     }
 }
 

@@ -1056,6 +1056,14 @@ public class VocalixAiClient {
                 callback.onError("مفتاح API غير صالح لهذا المزود. يرجى التحقق من المفتاح في الإعدادات.");
                 return null;
             }
+            // Request-level rate limit: the whole account is saturated, so trying the remaining
+            // models back-to-back only burns more quota and guarantees the same 429. Fail fast.
+            if (code == 429 && !body.contains("model")) {
+                outcome[0] = 2;
+                callback.onError("تم استنفاد الحصة اليومية لهذا المفتاح لدى " + providerNameOf(endpointUrl)
+                        + ". جرّب لاحقاً بعد إعادة تعيين الحصة أو استخدم مفتاحاً/مزوداً آخر.");
+                return null;
+            }
             if (code == 404 || body.contains("model_not_found") || body.contains("does not exist") || body.contains("is not supported")) {
                 BLACKLISTED_MODELS.add(modelName);
                 return "النموذج " + modelName + " غير متوفر، جاري تجربة بديل...";
@@ -1110,7 +1118,13 @@ public class VocalixAiClient {
                 if (PROVIDER_CLAUDE.equalsIgnoreCase(targetProvider)) {
                     summarizeWithClaude(textToSummarize, model != null ? model : "claude-3-5-haiku-latest", cleanKey, callback);
                 } else if (PROVIDER_OPENAI.equalsIgnoreCase(targetProvider)) {
-                    summarizeWithOpenAi(textToSummarize, model != null ? model : "gpt-4o-mini", cleanKey, callback);
+                    runSummaryQueue(openAiCompatSummaryQueue("https://api.openai.com/v1", model), cleanKey,
+                            (m, cb) -> summarizeWithOpenAi(textToSummarize, m, cleanKey, cb), callback);
+                } else if (PROVIDER_GROQ.equalsIgnoreCase(targetProvider)) {
+                    // Groq has no audio models for chat: summarize with its fast llama text models.
+                    runSummaryQueue(openAiCompatSummaryQueue("https://api.groq.com/openai/v1", model), cleanKey,
+                            (m, cb) -> summarizeWithOpenAiCompat(textToSummarize, m, cleanKey,
+                                    "https://api.groq.com/openai/v1", "Groq", cb), callback);
                 } else {
                     summarizeWithGemini(textToSummarize, model, cleanKey, callback);
                 }
@@ -1228,10 +1242,62 @@ public class VocalixAiClient {
         }
     }
 
-    private static void summarizeWithOpenAi(String textToSummarize, String model, String apiKey, SummarizeCallback callback) {
+    /** Per-model summary attempt. */
+    private interface SummaryAttempt { void tryModel(String model, SummarizeCallback callback); }
+
+    /**
+     * Runs a summary through the model queue with cooldown/blacklist awareness: unhealthy models
+     * are tried last (one grace chance) instead of being skipped silently.
+     */
+    private static void runSummaryQueue(List<String> priorities, String apiKey, SummaryAttempt attempt,
+                                        SummarizeCallback callback) {
+        List<String> queue = buildModelQueue(priorities, null, null, true);
+        boolean first = true;
+        for (String m : queue) {
+            if (!first && !isModelAvailable(m)) continue; // degraded tail: only one last grace attempt
+            final boolean[] ok = new boolean[1];
+            final boolean[] fatal = new boolean[1];
+            SummarizeCallback guard = new SummarizeCallback() {
+                @Override public void onSuccess(String summary) { ok[0] = true; callback.onSuccess(summary); }
+                @Override public void onError(String error) { fatal[0] = true; callback.onError(error); }
+            };
+            try {
+                attempt.tryModel(m, guard);
+            } catch (Exception e) {
+                Log.w(TAG, "Summary attempt failed on " + m + ": " + e.getMessage());
+            }
+            if (ok[0] || fatal[0]) return;
+            first = false;
+        }
+        callback.onError("تعذر توليد الملخص على جميع النماذج المتاحة. جرّب لاحقاً بعد إعادة تعيين الحصة.");
+    }
+
+    /** Text-only chat models usable for summarization on an OpenAI-compatible endpoint. */
+    private static List<String> openAiCompatSummaryQueue(String baseUrl, String userChosenModel) {
+        List<String> priorities = new ArrayList<>();
+        boolean isGroq = baseUrl.contains("groq.com");
+        if (isGroq) {
+            priorities.add("llama-3.3-70b-versatile");
+            priorities.add("llama-3.1-8b-instant");
+        } else {
+            priorities.add("gpt-4o-mini");
+            priorities.add("gpt-4o");
+        }
+        // Never summarize with whisper/audio models even if that's what was chosen for transcription.
+        String chosen = (userChosenModel == null || userChosenModel.isEmpty() || MODEL_AUTO.equalsIgnoreCase(userChosenModel))
+                ? null : userChosenModel.toLowerCase(Locale.US);
+        if (chosen != null && !chosen.contains("whisper") && !chosen.contains("audio") && !priorities.contains(chosen)) {
+            priorities.add(0, chosen);
+        }
+        return priorities;
+    }
+
+    /** Shared OpenAI-style /chat/completions summarization used by both OpenAI and Groq providers. */
+    private static void summarizeWithOpenAiCompat(String textToSummarize, String model, String apiKey,
+                                                  String baseUrl, String providerName, SummarizeCallback callback) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL("https://api.openai.com/v1/chat/completions");
+            URL url = new URL(baseUrl + "/chat/completions");
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Authorization", "Bearer " + apiKey);
@@ -1241,7 +1307,7 @@ public class VocalixAiClient {
             conn.setDoOutput(true);
 
             JSONObject root = new JSONObject();
-            root.put("model", model.contains("whisper") ? "gpt-4o-mini" : model);
+            root.put("model", model);
             JSONArray messages = new JSONArray();
 
             JSONObject sys = new JSONObject();
@@ -1274,17 +1340,25 @@ public class VocalixAiClient {
                 JSONObject json = new JSONObject(sb.toString());
                 JSONArray choices = json.optJSONArray("choices");
                 if (choices != null && choices.length() > 0) {
-                    String result = choices.getJSONObject(0).getJSONObject("message").optString("content", "");
-                    callback.onSuccess(result.trim());
-                    return;
+                    JSONObject first = choices.optJSONObject(0);
+                    JSONObject msg = first != null ? first.optJSONObject("message") : null;
+                    String result = msg != null ? msg.optString("content", "") : "";
+                    if (!result.trim().isEmpty()) {
+                        callback.onSuccess(result.trim());
+                        return;
+                    }
                 }
             }
-            callback.onError("تعذر توليد الملخص من OpenAI: " + sb.toString());
+            callback.onError("تعذر توليد الملخص من " + providerName + " (" + code + ")");
         } catch (Exception e) {
             callback.onError("خطأ: " + e.getMessage());
         } finally {
             if (conn != null) conn.disconnect();
         }
+    }
+
+    private static void summarizeWithOpenAi(String textToSummarize, String model, String apiKey, SummarizeCallback callback) {
+        summarizeWithOpenAiCompat(textToSummarize, model, apiKey, "https://api.openai.com/v1", "OpenAI", callback);
     }
 
     private static void summarizeWithClaude(String textToSummarize, String model, String apiKey, SummarizeCallback callback) {
@@ -1338,7 +1412,7 @@ public class VocalixAiClient {
                     return;
                 }
             }
-            callback.onError("تعذر التلخيص عبر Claude: " + sb.toString());
+            callback.onError("تعذر التلخيص عبر Claude (" + code + ")");
         } catch (Exception e) {
             callback.onError("خطأ: " + e.getMessage());
         } finally {
